@@ -4,4 +4,4 @@ O Onde Guardei? armazena nomes, fotos, observações e locais no espaço privado
 
 A câmera e o seletor de fotos são abertos somente por ação do usuário. A foto escolhida é copiada para o armazenamento privado. Os backups são exportados e importados pelo seletor de arquivos do Android, em um destino escolhido pelo usuário; não são criptografados. Guarde-os em local adequado à privacidade das fotos.
 
-O backup automático do Android está desativado. A desinstalação apaga os dados privados. Cópias anteriores de imagens podem permanecer no armazenamento privado para preservar a recuperação do catálogo. A exclusão de um cadastro não apaga backups já exportados.
+O backup automático do Android está desativado. A desinstalação apaga os dados privados. As fotos que deixam de ser usadas por qualquer cadastro são apagadas do armazenamento privado; a exclusão de um cadastro não apaga backups já exportados.

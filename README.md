@@ -6,12 +6,13 @@ nome ou ambos e informe onde o objeto está: quarto → armário → caixa, por 
 ## Recursos
 
 - Cadastro e edição de objetos com fotos, observações e palavras-chave.
-- Locais organizados dentro de outros locais.
+- Locais organizados dentro de outros locais, com caminho sempre visível.
 - Busca sem distinção de acentos, inclusive pelo caminho do local.
 - Ação **Mudei de lugar**, com histórico das mudanças.
-- Rascunho para continuar um cadastro depois.
+- Rascunho para continuar um cadastro depois, inclusive se o app for fechado.
 - Exportação e restauração de backup com as fotos incluídas.
 - Filtro de local com chip explícito e limpeza de fotos órfãs.
+- Aviso de recuperação quando o catálogo é reaberto de uma versão anterior.
 
 Os dados ficam no aparelho. Não há conta, anúncios, rastreamento, reconhecimento
 automático de imagens ou serviço de nuvem. Faça backups antes de desinstalar:
@@ -24,6 +25,7 @@ Android SDK e NDK 28.2.13676358 são necessários para compilar.
 
 ```sh
 flutter pub get
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
 flutter build apk --release
@@ -51,6 +53,11 @@ restauração substitui os cadastros atuais após confirmação. Nesta versão c
 foto pode ter até 15 MiB, o conjunto de fotos exportadas até 70 MiB e o arquivo
 importado até 100 MiB. O aplicativo mantém também uma versão anterior do catálogo
 para recuperação de falhas de leitura; isso não substitui um backup externo.
+
+Quando uma foto não está mais no aparelho, o backup é gravado sem ela e o app
+avisa quantas fotos ficaram de fora. Fotos sem dono (apagadas junto com o
+cadastro, trocadas por outra ou substituídas por uma restauração) são removidas
+do armazenamento privado.
 
 Licença MIT. Bibliotecas de terceiros mantêm suas respectivas licenças,
 disponíveis também em **Licenças** no aplicativo.

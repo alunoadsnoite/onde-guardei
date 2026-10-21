@@ -7,15 +7,66 @@ String newId() => List.generate(
   16,
   (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
 ).join();
+
+const _foldings = <String, String>{
+  'á': 'a',
+  'à': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'ä': 'a',
+  'å': 'a',
+  'é': 'e',
+  'è': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'í': 'i',
+  'ì': 'i',
+  'î': 'i',
+  'ï': 'i',
+  'ó': 'o',
+  'ò': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ö': 'o',
+  'ø': 'o',
+  'ú': 'u',
+  'ù': 'u',
+  'û': 'u',
+  'ü': 'u',
+  'ç': 'c',
+  'ñ': 'n',
+  'ý': 'y',
+  'ÿ': 'y',
+  'š': 's',
+  'ž': 'z',
+  'ğ': 'g',
+  'ı': 'i',
+  'ł': 'l',
+  'đ': 'd',
+  'ð': 'd',
+  'þ': 't',
+  'æ': 'a',
+  'œ': 'o',
+  'ß': 'ss',
+};
+
+/// Tira acentos e caixa, para que a busca encontre "cabo" ao digitar "cábô".
 String normalize(String text) {
-  const from = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const to = 'aaaaaeeeeiiiiooooouuuuc';
-  var result = text.toLowerCase();
-  for (var i = 0; i < from.length; i++) {
-    result = result.replaceAll(from[i], to[i]);
+  final lower = text.toLowerCase();
+  final buffer = StringBuffer();
+  for (final rune in lower.runes) {
+    if (rune < 128) {
+      buffer.writeCharCode(rune);
+      continue;
+    }
+    final char = String.fromCharCodes([rune]);
+    buffer.write(_foldings[char] ?? char);
   }
-  return result;
+  return buffer.toString();
 }
+
+/// Texto sem acento em minúsculas, usado para ordenar e comparar.
+String folded(String text) => normalize(text).trim().toLowerCase();
 
 class Place {
   final String id, name;
@@ -96,38 +147,116 @@ class Catalog {
   final List<Place> places;
   final List<StoredItem> items;
   const Catalog({this.places = const [], this.items = const []});
-  String path(String? id) {
-    if (id == null) return 'Sem local definido';
+
+  /// Índice dos locais por id, para não repetir buscas lineares.
+  Map<String, Place> get placeIndex => {for (final p in places) p.id: p};
+
+  /// Caminho do local em partes: ['Quarto', 'Armário', 'Caixa azul'].
+  List<String> pathSegments(String? id) => _segments(id, placeIndex);
+
+  List<String> _segments(String? id, Map<String, Place> byId) {
+    if (id == null) return const [];
     final names = <String>[];
     final visited = <String>{};
-    while (id != null && visited.add(id)) {
-      final p = places.where((p) => p.id == id).firstOrNull;
-      if (p == null) break;
-      names.insert(0, p.name);
-      id = p.parentId;
+    var current = id;
+    while (true) {
+      if (!visited.add(current)) break;
+      final place = byId[current];
+      if (place == null) break;
+      names.insert(0, place.name);
+      final parent = place.parentId;
+      if (parent == null) break;
+      current = parent;
     }
+    return names;
+  }
+
+  /// Caminho legível do local: "Quarto › Armário › Caixa azul".
+  String path(String? id) => _path(id, placeIndex);
+
+  String _path(String? id, Map<String, Place> byId) {
+    if (id == null) return 'Sem local definido';
+    final names = _segments(id, byId);
+    if (names.isEmpty) return 'Local desconhecido';
     return names.join(' › ');
+  }
+
+  /// Verdadeiro quando o local está dentro do ancestral informado.
+  bool isInside(String? id, String? ancestorId) =>
+      _isInside(id, ancestorId, placeIndex);
+
+  bool _isInside(String? id, String? ancestorId, Map<String, Place> byId) {
+    if (ancestorId == null) return true;
+    if (id == null) return false;
+    final visited = <String>{};
+    var current = id;
+    while (true) {
+      if (!visited.add(current)) break;
+      if (current == ancestorId) return true;
+      final place = byId[current];
+      if (place == null) break;
+      final parent = place.parentId;
+      if (parent == null) break;
+      current = parent;
+    }
+    return false;
   }
 
   List<StoredItem> search(String query, {String? placeId}) {
     final words = normalize(
       query,
-    ).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-    final found = items.where((i) {
-      if (placeId != null) {
-        var current = i.placeId;
-        final visited = <String>{};
-        while (current != null && current != placeId && visited.add(current)) {
-          current = places.where((p) => p.id == current).firstOrNull?.parentId;
-        }
-        if (current != placeId) return false;
+    ).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final byId = placeIndex;
+    final found = <StoredItem>[];
+    for (final item in items) {
+      if (placeId != null && !_isInside(item.placeId, placeId, byId)) continue;
+      if (words.isEmpty) {
+        found.add(item);
+        continue;
       }
       final hay = normalize(
-        '${i.name} ${i.notes} ${i.keywords} ${path(i.placeId)}',
+        '${item.name} ${item.notes} ${item.keywords} ${_path(item.placeId, byId)}',
       );
-      return words.every(hay.contains);
-    }).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      if (words.every(hay.contains)) found.add(item);
+    }
+    found.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return found;
+  }
+
+  /// Quantos objetos ficam em cada local, contando os locais que estão dentro.
+  Map<String, int> itemsByPlace() {
+    final byId = placeIndex;
+    final counts = <String, int>{for (final p in places) p.id: 0};
+    for (final item in items) {
+      final visited = <String>{};
+      var current = item.placeId;
+      while (current != null) {
+        if (!visited.add(current)) break;
+        counts[current] = (counts[current] ?? 0) + 1;
+        current = byId[current]?.parentId;
+      }
+    }
+    return counts;
+  }
+
+  /// Locais ordenados pela hierarquia, sem diferenciar acentos ou caixa.
+  List<Place> sortedPlaces() {
+    final byId = placeIndex;
+    final segments = <String, List<String>>{
+      for (final p in places) p.id: _segments(p.id, byId),
+    };
+    final list = [...places];
+    list.sort((a, b) {
+      final left = segments[a.id] ?? const <String>[];
+      final right = segments[b.id] ?? const <String>[];
+      final size = min(left.length, right.length);
+      for (var i = 0; i < size; i++) {
+        final result = folded(left[i]).compareTo(folded(right[i]));
+        if (result != 0) return result;
+      }
+      return left.length.compareTo(right.length);
+    });
+    return list;
   }
 
   Map<String, dynamic> toJson() => {
@@ -161,16 +290,19 @@ class Catalog {
         throw const FormatException('Local inválido ou repetido.');
       }
     }
+    final byId = placeIndex;
     for (final p in places) {
-      var parent = p.parentId;
       final visited = {p.id};
+      var parent = p.parentId;
       while (parent != null) {
         if (!ids.contains(parent) || !visited.add(parent)) {
           throw const FormatException(
             'A organização dos locais contém um ciclo ou local ausente.',
           );
         }
-        parent = places.firstWhere((p) => p.id == parent).parentId;
+        final next = byId[parent]?.parentId;
+        if (next == null) break;
+        parent = next;
       }
     }
     final itemIds = <String>{};

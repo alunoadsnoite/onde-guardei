@@ -6,15 +6,33 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:onde_guardei/domain/models.dart';
 
+const maxPhotoBytes = 15 * 1024 * 1024;
+const maxBackupPhotosBytes = 70 * 1024 * 1024;
+const maxBackupFileBytes = 100 * 1024 * 1024;
+
+/// Resultado de uma exportação: o arquivo e a contagem de fotos que não
+/// estavam no aparelho e por isso ficaram de fora.
+class BackupResult {
+  final File file;
+  final int missingPhotos;
+  const BackupResult(this.file, this.missingPhotos);
+}
+
 class CatalogRepository extends ChangeNotifier {
   final Directory directory;
   Catalog data = const Catalog();
   String? recoveryNotice;
   bool _mainTrusted = true;
   Future<void> _tail = Future.value();
+  Future<void> _draftTail = Future.value();
+
+  /// Fotos copiadas nesta sessão que ainda não entraram em um cadastro.
+  final Set<String> _pendingPhotos = {};
+
   CatalogRepository(this.directory);
   File get _file => File('${directory.path}/catalog.json');
   File get _previous => File('${directory.path}/catalog.previous.json');
+  File get _draftFile => File('${directory.path}/draft.json');
   File photoFile(String name) {
     if (!Catalog.validPhoto(name)) {
       throw const FormatException('Nome de foto inválido.');
@@ -24,6 +42,7 @@ class CatalogRepository extends ChangeNotifier {
 
   Future<void> load() async {
     await Directory('${directory.path}/photos').create(recursive: true);
+    await _removeLeftoverBackups();
     if (!await _file.exists() && !await _previous.exists()) return;
     try {
       data = Catalog.fromJson(
@@ -44,6 +63,21 @@ class CatalogRepository extends ChangeNotifier {
       }
     }
     notifyListeners();
+    if (_mainTrusted) await _removeUnreferencedPhotos();
+  }
+
+  /// Apaga backups temporários que ficaram na pasta quando o app foi
+  /// fechado no meio de uma exportação.
+  Future<void> _removeLeftoverBackups() async {
+    try {
+      await for (final entry in directory.list()) {
+        if (entry is File && entry.path.endsWith('.ondeguardei.json')) {
+          await entry.delete();
+        }
+      }
+    } catch (_) {
+      // Sem permissões ou pasta ainda vazia: nada a fazer.
+    }
   }
 
   Future<T> _queue<T>(Future<T> Function() action) {
@@ -64,7 +98,35 @@ class CatalogRepository extends ChangeNotifier {
     await temporary.rename(_file.path);
     _mainTrusted = true;
     data = next;
+    final saved = data.items.map((i) => i.photo).whereType<String>();
+    _pendingPhotos.removeAll(saved);
     notifyListeners();
+    await _removeUnreferencedPhotos();
+  }
+
+  /// Apaga fotos que não são mais usadas por nenhum cadastro nem pelo
+  /// rascunho em andamento. Devolve quantas fotos foram removidas.
+  Future<int> _removeUnreferencedPhotos() async {
+    final folder = Directory('${directory.path}/photos');
+    if (!await folder.exists()) return 0;
+    final keep = data.items.map((i) => i.photo).whereType<String>().toSet();
+    final draft = await readDraft();
+    final draftPhoto = draft?['photo'];
+    if (draftPhoto is String) keep.add(draftPhoto);
+    keep.addAll(_pendingPhotos);
+    var removed = 0;
+    try {
+      await for (final entry in folder.list()) {
+        if (entry is! File) continue;
+        final name = entry.uri.pathSegments.last;
+        if (!Catalog.validPhoto(name) || keep.contains(name)) continue;
+        await entry.delete();
+        removed++;
+      }
+    } catch (_) {
+      // Sem permissão para limpar: as fotos ficam onde estão.
+    }
+    return removed;
   }
 
   Future<void> savePlace(Place place) => _queue(() async {
@@ -150,16 +212,55 @@ class CatalogRepository extends ChangeNotifier {
   );
   Future<String> copyPhoto(String source) async {
     final original = File(source);
-    if (await original.length() > 15 * 1024 * 1024) {
+    if (!await original.exists()) {
+      throw const FormatException(
+        'A foto escolhida não está mais disponível. Selecione-a novamente.',
+      );
+    }
+    if (await original.length() > maxPhotoBytes) {
       throw const FormatException('Escolha uma foto de até 15 MB.');
     }
     final name = '${newId()}.img';
-    await original.copy(photoFile(name).path);
+    final target = photoFile(name);
+    try {
+      await original.copy(target.path);
+    } catch (_) {
+      if (await target.exists()) await target.delete();
+      throw const FormatException(
+        'Não foi possível copiar a foto para o aplicativo.',
+      );
+    }
+    _pendingPhotos.add(name);
     return name;
   }
 
-  Future<void> saveDraft(Map<String, dynamic>? draft) async {
-    final f = File('${directory.path}/draft.json');
+  /// Esquece uma foto que o usuário tirou do cadastro e apaga o arquivo,
+  /// se mais nada estiver usando ele.
+  Future<void> discardPhoto(String? name) async {
+    if (name == null || !Catalog.validPhoto(name)) return;
+    _pendingPhotos.remove(name);
+    if (data.items.any((i) => i.photo == name)) return;
+    final draft = await readDraft();
+    if (draft?['photo'] == name) return;
+    final file = photoFile(name);
+    if (await file.exists()) await file.delete();
+  }
+
+  /// Tira da tela o aviso de recuperação, sem mexer nos dados.
+  void dismissNotice() {
+    if (recoveryNotice == null) return;
+    recoveryNotice = null;
+    notifyListeners();
+  }
+
+  Future<void> saveDraft(Map<String, dynamic>? draft) {
+    final next = _draftTail.then((_) => _writeDraft(draft));
+    _draftTail = next.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    return next;
+  }
+
+  Future<void> _writeDraft(Map<String, dynamic>? draft) async {
+    final f = _draftFile;
     if (draft == null) {
       if (await f.exists()) await f.delete();
       return;
@@ -171,25 +272,32 @@ class CatalogRepository extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> readDraft() async {
     try {
-      return jsonDecode(
-            await File('${directory.path}/draft.json').readAsString(),
-          )
+      return jsonDecode(await _draftFile.readAsString())
           as Map<String, dynamic>;
     } catch (_) {
       return null;
     }
   }
 
-  Future<File> exportBackup() => _queue(() async {
-    final photos = data.items.map((i) => i.photo).whereType<String>().toSet();
+  Future<BackupResult> exportBackup() => _queue(() async {
+    final wanted = data.items.map((i) => i.photo).whereType<String>().toSet();
+    final photos = <String, String>{};
     var size = 0;
-    for (final name in photos) {
-      size += await photoFile(name).length();
-    }
-    if (size > 70 * 1024 * 1024) {
-      throw const FormatException(
-        'Este catálogo excede o limite de 70 MB de fotos por backup nesta versão.',
-      );
+    var missing = 0;
+    for (final name in wanted) {
+      final file = photoFile(name);
+      if (!await file.exists()) {
+        missing++;
+        continue;
+      }
+      final bytes = await file.length();
+      if (size + bytes > maxBackupPhotosBytes) {
+        throw const FormatException(
+          'Este catálogo excede o limite de 70 MB de fotos por backup nesta versão.',
+        );
+      }
+      size += bytes;
+      photos[name] = base64Encode(await file.readAsBytes());
     }
     final file = File('${directory.path}/backup-${newId()}.ondeguardei.json');
     final out = file.openWrite();
@@ -198,44 +306,65 @@ class CatalogRepository extends ChangeNotifier {
         '{"format":"onde-guardei-backup","version":1,"catalog":${jsonEncode(data.toJson())},"photos":{',
       );
       var first = true;
-      for (final name in photos) {
+      for (final entry in photos.entries) {
         if (!first) out.write(',');
         first = false;
-        out.write(
-          '${jsonEncode(name)}:${jsonEncode(base64Encode(await photoFile(name).readAsBytes()))}',
-        );
+        out.write('${jsonEncode(entry.key)}:${jsonEncode(entry.value)}');
       }
       out.write('}}');
       await out.flush();
     } finally {
       await out.close();
     }
-    return file;
+    return BackupResult(file, missing);
   });
+
   Future<void> restoreBackup(File file) => _queue(() async {
-    if (await file.length() > 100 * 1024 * 1024) {
+    if (await file.length() > maxBackupFileBytes) {
       throw const FormatException('O arquivo excede o limite de 100 MB.');
     }
-    final j = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    Map<String, dynamic> j;
+    try {
+      j = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    } catch (_) {
+      throw const FormatException(
+        'Este arquivo não é um backup válido do Onde Guardei?.',
+      );
+    }
     if (j['format'] != 'onde-guardei-backup' || j['version'] != 1) {
       throw const FormatException(
         'Este arquivo não é um backup do Onde Guardei?.',
       );
     }
-    final restored = Catalog.fromJson(
-      Map<String, dynamic>.from(j['catalog'] as Map),
-    );
-    final images = Map<String, dynamic>.from(j['photos'] as Map);
+    final Catalog restored;
+    try {
+      restored = Catalog.fromJson(
+        Map<String, dynamic>.from(j['catalog'] as Map),
+      );
+    } catch (_) {
+      throw const FormatException(
+        'O backup está corrompido e não pôde ser lido. Tente outro arquivo.',
+      );
+    }
+    final rawPhotos = j['photos'];
+    if (rawPhotos is! Map) {
+      throw const FormatException(
+        'Este backup está sem as fotos e não pode ser restaurado.',
+      );
+    }
+    final images = Map<String, dynamic>.from(rawPhotos);
     final mapping = <String, String>{};
     final created = <File>[];
     try {
       for (final old
           in restored.items.map((i) => i.photo).whereType<String>().toSet()) {
         if (images[old] is! String) {
-          throw const FormatException('O backup está sem uma das fotos.');
+          throw const FormatException(
+            'Este backup está sem alguma das fotos e não pode ser restaurado.',
+          );
         }
         final bytes = base64Decode(images[old] as String);
-        if (bytes.length > 15 * 1024 * 1024) {
+        if (bytes.length > maxPhotoBytes) {
           throw const FormatException('Uma foto do backup excede 15 MB.');
         }
         final name = '${newId()}.img';

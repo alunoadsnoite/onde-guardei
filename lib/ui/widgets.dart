@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:onde_guardei/domain/repository.dart';
 
+/// Foto do cadastro. O `cacheWidth` evita que o Android decodifique a
+/// imagem inteira para desenhar uma miniatura, o que economiza memória.
 class PhotoView extends StatelessWidget {
   final CatalogRepository repo;
   final String? photo;
-  const PhotoView(this.repo, this.photo, {super.key});
+  final int? cacheWidth;
+  const PhotoView(this.repo, this.photo, {super.key, this.cacheWidth});
   @override
   Widget build(BuildContext context) => photo == null
       ? const ColoredBox(
@@ -20,11 +23,10 @@ class PhotoView extends StatelessWidget {
       : Image.file(
           repo.photoFile(photo!),
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Center(
-            child: Icon(
-              Icons.broken_image_outlined,
-              color: Color(0xFF234B40),
-            ),
+          cacheWidth: cacheWidth,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (_, _, _) => const Center(
+            child: Icon(Icons.broken_image_outlined, color: Color(0xFF234B40)),
           ),
         );
 }

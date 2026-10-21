@@ -19,6 +19,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: flutter pub get
+      - name: Conferir a versão mostrada no aplicativo
+        run: |
+          VERSION=$(sed -n 's/^version: \([0-9.]*\).*/\1/p' pubspec.yaml)
+          grep -q "appVersion = '$VERSION'" lib/ui/app.dart
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test

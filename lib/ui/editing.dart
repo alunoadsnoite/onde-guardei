@@ -32,18 +32,27 @@ class _ItemEditorState extends State<ItemEditor> {
   late String? place =
       widget.draft?['placeId'] as String? ?? widget.item?.placeId;
   bool busy = false, saved = false;
+  late final AppLifecycleListener lifecycle;
 
   @override
   void initState() {
     super.initState();
+    lifecycle = AppLifecycleListener(
+      onInactive: () => keepDraft(),
+      onHide: () => keepDraft(),
+      onPause: () => keepDraft(),
+      onDetach: () => keepDraft(),
+    );
     if (!widget.repo.data.places.any((p) => p.id == place)) place = null;
   }
 
   @override
   void dispose() {
+    lifecycle.dispose();
     name.dispose();
     notes.dispose();
     keywords.dispose();
+    if (!saved) widget.repo.discardPhoto(photo);
     super.dispose();
   }
 
@@ -55,6 +64,23 @@ class _ItemEditorState extends State<ItemEditor> {
     'photo': photo,
     'placeId': place,
   };
+
+  bool get blank =>
+      name.text.isEmpty &&
+      notes.text.isEmpty &&
+      keywords.text.isEmpty &&
+      photo == null;
+
+  /// Guarda o rascunho sem interromper o usuário, por exemplo quando o
+  /// aplicativo vai para segundo plano.
+  Future<void> keepDraft() async {
+    if (saved || blank) return;
+    try {
+      await widget.repo.saveDraft(draft);
+    } catch (_) {
+      // Sem espaço ou arquivo ocupado: o rascunho fica só na tela.
+    }
+  }
 
   Future<void> pick(ImageSource source) async {
     setState(() => busy = true);
@@ -68,8 +94,12 @@ class _ItemEditorState extends State<ItemEditor> {
       );
       if (file != null) {
         final selected = await widget.repo.copyPhoto(file.path);
+        final previous = photo;
         photo = selected;
         await widget.repo.saveDraft(draft);
+        if (previous != null && previous != selected) {
+          await widget.repo.discardPhoto(previous);
+        }
         if (mounted) setState(() {});
       }
     } catch (e) {
@@ -127,12 +157,7 @@ class _ItemEditorState extends State<ItemEditor> {
   Future<bool> leave() async {
     if (saved) return true;
     if (busy) return false;
-    if (name.text.isEmpty &&
-        notes.text.isEmpty &&
-        keywords.text.isEmpty &&
-        photo == null) {
-      return true;
-    }
+    if (blank) return true;
     if (await confirm(
       context,
       'Sair do cadastro?',
@@ -171,7 +196,7 @@ class _ItemEditorState extends State<ItemEditor> {
                 borderRadius: BorderRadius.circular(24),
                 child: SizedBox(
                   height: 190,
-                  child: PhotoView(widget.repo, photo),
+                  child: PhotoView(widget.repo, photo, cacheWidth: 800),
                 ),
               ),
               const SizedBox(height: 12),
@@ -193,7 +218,12 @@ class _ItemEditorState extends State<ItemEditor> {
                     TextButton(
                       onPressed: busy
                           ? null
-                          : () => setState(() => photo = null),
+                          : () async {
+                              final removed = photo;
+                              setState(() => photo = null);
+                              await widget.repo.discardPhoto(removed);
+                              await widget.repo.saveDraft(draft);
+                            },
                       child: const Text('Remover foto'),
                     ),
                 ],
@@ -347,7 +377,8 @@ class ItemDetail extends StatelessWidget {
                                 maxScale: 5,
                                 child: Image.file(
                                   repo.photoFile(i.photo!),
-                                  errorBuilder: (_, __, ___) =>
+                                  cacheWidth: 2000,
+                                  errorBuilder: (_, _, _) =>
                                       const Text('Foto indisponível.'),
                                 ),
                               ),
@@ -359,7 +390,7 @@ class ItemDetail extends StatelessWidget {
                         borderRadius: BorderRadius.circular(24),
                         child: AspectRatio(
                           aspectRatio: 4 / 3,
-                          child: PhotoView(repo, i.photo),
+                          child: PhotoView(repo, i.photo, cacheWidth: 1200),
                         ),
                       ),
                     ),
@@ -410,7 +441,10 @@ class ItemDetail extends StatelessWidget {
                         );
                         if (selected == null) return;
                         try {
-                          await repo.moveItem(id, selected.isEmpty ? null : selected);
+                          await repo.moveItem(
+                            id,
+                            selected.isEmpty ? null : selected,
+                          );
                         } catch (e) {
                           if (context.mounted) message(context, errorText(e));
                         }
@@ -454,11 +488,12 @@ class ItemDetail extends StatelessWidget {
                 ...i.moves.reversed.map(
                   (m) => ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.history, color: Color(0xFF234B40)),
-                    title: Text(m.to),
-                    subtitle: Text(
-                      '${dateText(m.at)} · antes: ${m.from}',
+                    leading: const Icon(
+                      Icons.history,
+                      color: Color(0xFF234B40),
                     ),
+                    title: Text(m.to),
+                    subtitle: Text('${dateText(m.at)} · antes: ${m.from}'),
                   ),
                 ),
               ],
@@ -480,9 +515,7 @@ class PlaceEditor extends StatefulWidget {
 
 class _PlaceEditorState extends State<PlaceEditor> {
   final form = GlobalKey<FormState>();
-  late final name = TextEditingController(
-    text: widget.place?.name,
-  );
+  late final name = TextEditingController(text: widget.place?.name);
   late String? parent = widget.place?.parentId;
   bool saving = false;
 
@@ -528,7 +561,11 @@ class _PlaceEditorState extends State<PlaceEditor> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            const Icon(Icons.folder_copy_outlined, size: 56, color: Color(0xFF234B40)),
+            const Icon(
+              Icons.folder_copy_outlined,
+              size: 56,
+              color: Color(0xFF234B40),
+            ),
             const SizedBox(height: 24),
             TextFormField(
               controller: name,

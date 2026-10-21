@@ -34,4 +34,5 @@ Future<bool> confirm(
           ),
         ],
       ),
-    ) ?? false;
+    ) ??
+    false;

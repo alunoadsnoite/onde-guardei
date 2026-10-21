@@ -5,6 +5,10 @@ import 'package:onde_guardei/ui/home.dart';
 
 const nativeFiles = MethodChannel('br.com.valdenor.ondeguardei/files');
 
+/// Versão mostrada ao usuário. Mantenha em sincronia com `pubspec.yaml`.
+const appVersion = '0.3.0';
+const appName = 'Onde Guardei?';
+
 ThemeData appTheme() => ThemeData(
   useMaterial3: true,
   scaffoldBackgroundColor: Color(0xFFF7F5EF),

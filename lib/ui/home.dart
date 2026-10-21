@@ -20,12 +20,19 @@ class _HomeState extends State<Home> {
   String? filter;
   bool working = false;
   Map<String, dynamic>? draft;
+  final search = TextEditingController();
   CatalogRepository get repo => widget.repo;
 
   @override
   void initState() {
     super.initState();
     refreshDraft();
+  }
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
   }
 
   Future<void> refreshDraft() async {
@@ -45,6 +52,17 @@ class _HomeState extends State<Home> {
       ),
     );
     await refreshDraft();
+  }
+
+  /// Escolhe um local como filtro e limpa a busca, mantendo os dois campos
+  /// em sincronia com o que está na tela.
+  void filterByPlace(String? id, {bool clearSearch = true}) {
+    if (clearSearch) search.clear();
+    setState(() {
+      filter = id;
+      if (clearSearch) query = '';
+      tab = 0;
+    });
   }
 
   Future<void> backup(bool restore) async {
@@ -74,14 +92,20 @@ class _HomeState extends State<Home> {
           message(context, 'Catálogo restaurado, com as fotos.');
         }
       } else {
-        temporary = await repo.exportBackup();
+        final result = await repo.exportBackup();
+        temporary = result.file;
         final saved = await nativeFiles.invokeMethod<bool>('exportBackup', {
           'path': temporary.path,
           'name':
               'Onde-Guardei-${DateTime.now().toIso8601String().substring(0, 10)}.ondeguardei.json',
         });
         if (saved == true && mounted) {
-          message(context, 'Backup salvo com os cadastros e as fotos.');
+          message(
+            context,
+            result.missingPhotos > 0
+                ? 'Backup salvo, mas ${result.missingPhotos} foto(s) não estavam no aparelho e ficaram de fora.'
+                : 'Backup salvo com os cadastros e as fotos.',
+          );
         }
       }
     } catch (e) {
@@ -102,12 +126,8 @@ class _HomeState extends State<Home> {
           ? filter
           : null;
       final items = repo.data.search(query, placeId: activeFilter);
-      final places = [...repo.data.places]
-        ..sort(
-          (a, b) => normalize(
-            repo.data.path(a.id),
-          ).compareTo(normalize(repo.data.path(b.id))),
-        );
+      final places = repo.data.sortedPlaces();
+      final counts = repo.data.itemsByPlace();
       return Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -128,8 +148,8 @@ class _HomeState extends State<Home> {
                 if (value == 'about') {
                   showAboutDialog(
                     context: context,
-                    applicationName: 'Onde Guardei?',
-                    applicationVersion: '0.2.0',
+                    applicationName: appName,
+                    applicationVersion: appVersion,
                     applicationLegalese:
                         'Seu catálogo de objetos e locais da casa.\nFunciona sem conta e sem internet.\nFotos e textos ficam no seu aparelho.\nGuarde um backup fora do app antes de trocar de celular ou desinstalar.\n\nCódigo aberto • licença MIT',
                   );
@@ -186,12 +206,23 @@ class _HomeState extends State<Home> {
                             ),
                             const SizedBox(height: 20),
                             TextField(
+                              controller: search,
                               onChanged: (value) =>
                                   setState(() => query = value),
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 hintText: 'Buscar objeto, palavra ou local',
-                                prefixIcon: Icon(Icons.search),
+                                prefixIcon: const Icon(Icons.search),
                                 labelText: 'O que você está procurando?',
+                                suffixIcon: query.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        tooltip: 'Limpar busca',
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () {
+                                          search.clear();
+                                          setState(() => query = '');
+                                        },
+                                      ),
                               ),
                             ),
                             if (activeFilter != null)
@@ -200,17 +231,30 @@ class _HomeState extends State<Home> {
                                 child: InputChip(
                                   label: Text(repo.data.path(activeFilter)),
                                   onDeleted: () =>
-                                      setState(() => filter = null),
+                                      filterByPlace(null, clearSearch: false),
                                 ),
                               ),
                             if (repo.recoveryNotice != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 12),
-                                child: Text(
-                                  repo.recoveryNotice!,
-                                  style: const TextStyle(
-                                    color: Color(0xFF95462D),
-                                  ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        repo.recoveryNotice!,
+                                        style: const TextStyle(
+                                          color: Color(0xFF95462D),
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Dispensar aviso',
+                                      visualDensity: VisualDensity.compact,
+                                      icon: const Icon(Icons.close, size: 20),
+                                      onPressed: repo.dismissNotice,
+                                    ),
+                                  ],
                                 ),
                               ),
                             if (draft != null)
@@ -279,7 +323,7 @@ class _HomeState extends State<Home> {
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final p = places[index];
-                    final count = repo.data.search('', placeId: p.id).length;
+                    final count = counts[p.id] ?? 0;
                     return Card(
                       color: Colors.white,
                       elevation: 0,
@@ -294,14 +338,10 @@ class _HomeState extends State<Home> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         subtitle: Text(
-                          '${repo.data.path(p.id)}\n$count objetos, incluindo os locais de dentro',
+                          '${repo.data.path(p.id)}\n$count ${count == 1 ? 'objeto' : 'objetos'}, incluindo os locais de dentro',
                         ),
                         isThreeLine: true,
-                        onTap: () => setState(() {
-                          filter = p.id;
-                          query = '';
-                          tab = 0;
-                        }),
+                        onTap: () => filterByPlace(p.id),
                         trailing: IconButton(
                           tooltip: 'Editar ${p.name}',
                           icon: const Icon(Icons.edit_outlined),
@@ -382,7 +422,7 @@ class ObjectTile extends StatelessWidget {
               child: SizedBox(
                 width: 76,
                 height: 84,
-                child: PhotoView(repo, item.photo),
+                child: PhotoView(repo, item.photo, cacheWidth: 240),
               ),
             ),
             const SizedBox(width: 16),
