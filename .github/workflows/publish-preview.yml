@@ -1,0 +1,23 @@
+name: Publicar APK de teste
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: onde-guardei-apk-teste
+          path: apk
+          run-id: 39625787314
+          github-token: ${{ github.token }}
+      - name: Publicar primeira versão de teste
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mv apk/app-release.apk apk/Onde-Guardei-0.1.0-teste.apk
+          gh release create v0.1.0-preview.1 apk/Onde-Guardei-0.1.0-teste.apk --target 3dd90ce --prerelease --title 'Onde Guardei? 0.1.0 — versão de teste' --notes 'Primeira versão de teste para Android 7 ou mais recente. Catálogo offline com fotos, locais organizados, busca, histórico de mudanças e backup com fotos. Dez testes, análise estática e compilação Android aprovados. APK com assinatura de teste; câmera e seletor de arquivos precisam de validação em aparelho físico. Consulte docs/TESTE-NO-CELULAR.md. Exporte um backup antes de desinstalar ou trocar a instalação.'
