@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:onde_guardei/catalog.dart';
-import 'package:onde_guardei/main.dart';
+import 'package:onde_guardei/domain/models.dart';
+import 'package:onde_guardei/domain/repository.dart';
+import 'package:onde_guardei/ui/app.dart';
+import 'package:onde_guardei/ui/editing.dart';
+import 'package:onde_guardei/ui/home.dart';
 
 class ScreenRepository extends CatalogRepository {
   ScreenRepository(super.directory);
