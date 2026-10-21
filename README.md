@@ -20,7 +20,7 @@ a desinstalação remove os dados privados do aplicativo.
 ## Desenvolvimento
 
 Flutter 3.47.7 / Dart 3.13.5. A revisão do SDK está em `.flutter-version`. Java 17,
-Android SDK e NDK 25.1.8937393 são necessários para compilar.
+Android SDK e NDK 28.2.13676358 são necessários para compilar.
 
 ```sh
 flutter pub get
