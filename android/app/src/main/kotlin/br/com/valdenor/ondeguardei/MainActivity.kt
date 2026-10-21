@@ -23,6 +23,7 @@ class MainActivity : FlutterActivity() {
                 }
                 try {
                     when (call.method) {
+                        "dataDirectory" -> result.success(filesDir.absolutePath)
                         "exportBackup" -> {
                             val path = call.argument<String>("path") ?: error("Arquivo ausente")
                             val source = File(path).canonicalFile

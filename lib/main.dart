@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'catalog.dart';
 
 const forest = Color(0xFF234B40);
@@ -24,7 +23,9 @@ class Bootstrap extends StatefulWidget {
 class _BootstrapState extends State<Bootstrap> {
   late Future<CatalogRepository> future = open();
   Future<CatalogRepository> open() async {
-    final root = await getApplicationSupportDirectory();
+    final root = Directory(
+      (await nativeFiles.invokeMethod<String>('dataDirectory'))!,
+    );
     final repo = CatalogRepository(Directory('${root.path}/catalog'));
     await repo.load();
     if (Platform.isAndroid) {
