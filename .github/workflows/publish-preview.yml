@@ -36,11 +36,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          NOME="Onde-Guardei-${VERSION}-teste.apk"
+          NOME="Onde-Guardei-${VERSION}.apk"
           mv apk/app-release.apk "apk/${NOME}"
           TAG="v${VERSION}-preview"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release delete "$TAG" --yes --cleanup-tag
+            gh release upload "$TAG" "apk/${NOME}" --clobber
+            echo "APK atualizado em ${TAG}"
+            exit 0
           fi
           gh release create "$TAG" "apk/${NOME}" --prerelease \
             --title "Onde Guardei? ${VERSION} — versão de teste" \
