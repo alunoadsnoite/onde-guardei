@@ -143,17 +143,22 @@ void main() {
     await expectLater(repo.load(), throwsFormatException);
     expect(await file.readAsString(), 'danificado');
   });
-  test('excluir objeto apaga a foto que ficou sem dono', () async {
-    final source = File('${root.path}/original');
-    await source.writeAsBytes([9, 9]);
-    final photo = await repo.copyPhoto(source.path);
-    final obj = item('Com foto', photo: photo);
-    await repo.saveItem(obj);
-    expect(await repo.photoFile(photo).exists(), isTrue);
-    await repo.deleteItem(obj.id);
-    expect(await repo.photoFile(photo).exists(), isFalse);
-  });
-  test('trocar a foto apaga a imagem antiga', () async {
+  test(
+    'excluir objeto preserva foto até a cópia anterior ser substituída',
+    () async {
+      final source = File('${root.path}/original');
+      await source.writeAsBytes([9, 9]);
+      final photo = await repo.copyPhoto(source.path);
+      final obj = item('Com foto', photo: photo);
+      await repo.saveItem(obj);
+      expect(await repo.photoFile(photo).exists(), isTrue);
+      await repo.deleteItem(obj.id);
+      expect(await repo.photoFile(photo).exists(), isTrue);
+      await repo.savePlace(Place(id: newId(), name: 'Sala'));
+      expect(await repo.photoFile(photo).exists(), isFalse);
+    },
+  );
+  test('trocar a foto preserva a imagem da cópia anterior', () async {
     final source = File('${root.path}/original');
     await source.writeAsBytes([1]);
     final antiga = await repo.copyPhoto(source.path);
@@ -169,6 +174,8 @@ void main() {
         updatedAt: obj.updatedAt,
       ),
     );
+    expect(await repo.photoFile(antiga).exists(), isTrue);
+    await repo.savePlace(Place(id: newId(), name: 'Sala'));
     expect(await repo.photoFile(antiga).exists(), isFalse);
     expect(await repo.photoFile(nova).exists(), isTrue);
   });
@@ -180,18 +187,24 @@ void main() {
     await repo.saveItem(item('Outro objeto'));
     expect(await repo.photoFile(photo).exists(), isTrue);
   });
-  test('backup avisa quando uma foto não está no aparelho', () async {
-    final source = File('${root.path}/original');
-    await source.writeAsBytes([1]);
-    final photo = await repo.copyPhoto(source.path);
-    await repo.saveItem(item('Com foto', photo: photo));
-    await repo.photoFile(photo).delete();
-    final backup = await repo.exportBackup();
-    expect(backup.missingPhotos, 1);
-    final j =
-        jsonDecode(await backup.file.readAsString()) as Map<String, dynamic>;
-    expect((j['photos'] as Map), isEmpty);
-  });
+  test(
+    'backup recusa foto ausente antes de criar arquivo inutilizável',
+    () async {
+      final source = File('${root.path}/original');
+      await source.writeAsBytes([1]);
+      final photo = await repo.copyPhoto(source.path);
+      await repo.saveItem(item('Com foto', photo: photo));
+      await repo.photoFile(photo).delete();
+      await expectLater(repo.exportBackup(), throwsFormatException);
+      expect(
+        await root
+            .list()
+            .where((f) => f.path.endsWith('.ondeguardei.json'))
+            .length,
+        0,
+      );
+    },
+  );
   test('restaurar backup remove as fotos do catálogo anterior', () async {
     final source = File('${root.path}/original');
     await source.writeAsBytes([1]);
@@ -201,6 +214,8 @@ void main() {
     await repo.saveItem(item('Depois do backup'));
     await repo.restoreBackup(backup.file);
     expect(repo.data.items.single.name, 'Antes');
+    expect(await repo.photoFile(photo).exists(), isTrue);
+    await repo.savePlace(Place(id: newId(), name: 'Sala'));
     expect(await repo.photoFile(photo).exists(), isFalse);
   });
   test('caminho, contagem e ordem dos locais', () {

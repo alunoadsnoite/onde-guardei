@@ -1,3 +1,9 @@
+## 0.3.1
+
+- Preserva as fotos usadas pela cópia de recuperação do catálogo; remove-as somente depois de essa cópia ser substituída.
+- Impede a exportação de backup com fotos ausentes, com orientação para corrigir os cadastros antes de tentar novamente.
+- Inclui teste de recuperação após exclusão e corrupção do catálogo principal.
+
 # Changelog
 
 Todas as alterações significativas deste projeto serão documentadas neste arquivo.

@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/download-artifact@v4
         with:
           name: onde-guardei-apk-teste
@@ -44,6 +46,6 @@ jobs:
             echo "APK atualizado em ${TAG}"
             exit 0
           fi
-          gh release create "$TAG" "apk/${NOME}" --prerelease \
+          gh release create "$TAG" "apk/${NOME}" --prerelease --target "${{ github.event.workflow_run.head_sha || github.sha }}" \
             --title "Onde Guardei? ${VERSION} — versão de teste" \
-            --notes "Versão de teste para Android 7 ou mais recente. Catálogo offline com fotos, locais organizados, busca, histórico de mudanças, rascunho, backup com fotos, limpeza de fotos órfãs e 20 testes automatizados. APK com assinatura de teste; câmera e seletor de arquivos precisam de validação em aparelho físico. Consulte docs/TESTE-NO-CELULAR.md."
+            --notes "Versão de teste para Android 7 ou mais recente. Catálogo offline com fotos, locais organizados, busca, histórico de mudanças, rascunho, backup com fotos, limpeza de fotos órfãs e testes automatizados. APK com assinatura de teste; câmera e seletor de arquivos precisam de validação em aparelho físico. Consulte docs/TESTE-NO-CELULAR.md."

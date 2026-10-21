@@ -110,6 +110,7 @@ class CatalogRepository extends ChangeNotifier {
     final folder = Directory('${directory.path}/photos');
     if (!await folder.exists()) return 0;
     final keep = data.items.map((i) => i.photo).whereType<String>().toSet();
+    keep.addAll(await _previousPhotos());
     final draft = await readDraft();
     final draftPhoto = draft?['photo'];
     if (draftPhoto is String) keep.add(draftPhoto);
@@ -127,6 +128,28 @@ class CatalogRepository extends ChangeNotifier {
       // Sem permissão para limpar: as fotos ficam onde estão.
     }
     return removed;
+  }
+
+  /// A cópia de recuperação precisa conservar também seus arquivos de foto.
+  Future<Set<String>> _previousPhotos() async {
+    if (!await _previous.exists()) return {};
+    try {
+      final previous = Catalog.fromJson(
+        jsonDecode(await _previous.readAsString()) as Map<String, dynamic>,
+      );
+      return previous.items
+          .map((item) => item.photo)
+          .whereType<String>()
+          .toSet();
+    } catch (_) {
+      // Não limpe fotos enquanto a cópia de recuperação não puder ser lida.
+      final folder = Directory('${directory.path}/photos');
+      if (!await folder.exists()) return {};
+      return (await folder.list().toList())
+          .whereType<File>()
+          .map((file) => file.uri.pathSegments.last)
+          .toSet();
+    }
   }
 
   Future<void> savePlace(Place place) => _queue(() async {
@@ -240,6 +263,7 @@ class CatalogRepository extends ChangeNotifier {
     if (name == null || !Catalog.validPhoto(name)) return;
     _pendingPhotos.remove(name);
     if (data.items.any((i) => i.photo == name)) return;
+    if ((await _previousPhotos()).contains(name)) return;
     final draft = await readDraft();
     if (draft?['photo'] == name) return;
     final file = photoFile(name);
@@ -283,12 +307,13 @@ class CatalogRepository extends ChangeNotifier {
     final wanted = data.items.map((i) => i.photo).whereType<String>().toSet();
     final photos = <String, String>{};
     var size = 0;
-    var missing = 0;
     for (final name in wanted) {
       final file = photoFile(name);
       if (!await file.exists()) {
-        missing++;
-        continue;
+        throw const FormatException(
+          'Não foi possível criar o backup porque uma foto não está no aparelho. '
+          'Selecione novamente ou remova as fotos indisponíveis dos cadastros e tente outra vez.',
+        );
       }
       final bytes = await file.length();
       if (size + bytes > maxBackupPhotosBytes) {
@@ -316,7 +341,7 @@ class CatalogRepository extends ChangeNotifier {
     } finally {
       await out.close();
     }
-    return BackupResult(file, missing);
+    return BackupResult(file, 0);
   });
 
   Future<void> restoreBackup(File file) => _queue(() async {
