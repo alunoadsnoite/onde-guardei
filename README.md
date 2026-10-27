@@ -3,6 +3,10 @@
 Aplicativo Android para encontrar objetos guardados em casa. Cadastre uma foto, um
 nome ou ambos e informe onde o objeto está: quarto → armário → caixa, por exemplo.
 
+## Instalação e atualização
+
+Baixe a [versão estável 0.3.1](https://github.com/alunoadsnoite/onde-guardei/releases/tag/v0.3.1). Ela preserva o certificado da estável 0.2.0 e foi testada em atualização direta, sem desinstalação, com dados e foto fictícios. As prévias 0.3.0/0.3.1 usam outro certificado: leia o [guia de migração](docs/MIGRACAO.md) antes de trocar de canal.
+
 ## Recursos
 
 - Cadastro e edição de objetos com fotos, observações e palavras-chave.
@@ -54,10 +58,7 @@ foto pode ter até 15 MiB, o conjunto de fotos exportadas até 70 MiB e o arquiv
 importado até 100 MiB. O aplicativo mantém também uma versão anterior do catálogo
 para recuperação de falhas de leitura; isso não substitui um backup externo.
 
-Quando uma foto não está mais no aparelho, o backup é gravado sem ela e o app
-avisa quantas fotos ficaram de fora. Fotos sem dono (apagadas junto com o
-cadastro, trocadas por outra ou substituídas por uma restauração) são removidas
-do armazenamento privado.
+Se uma foto necessária não estiver disponível, a exportação é recusada. Selecione novamente a foto ou remova a referência antes de exportar. Fotos continuam preservadas enquanto forem usadas pelo catálogo atual ou por sua cópia local de recuperação; somente depois podem ser removidas como órfãs.
 
 Licença MIT. Bibliotecas de terceiros mantêm suas respectivas licenças,
 disponíveis também em **Licenças** no aplicativo.
