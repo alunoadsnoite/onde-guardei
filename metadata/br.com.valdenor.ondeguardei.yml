@@ -1,0 +1,43 @@
+Categories:
+  - Inventory
+
+License: MIT
+
+Name: Onde Guardei?
+
+Summary: |
+  App Android para encontrar objetos guardados em casa com fotos e dados locais
+
+Description: |
+  Aplicativo Android para armazenar e localizar objetos guardados em casa.
+  Cadastre uma foto, um nome ou ambos e informe onde o objeto está: quarto →
+  armário → caixa, por exemplo. Com recursos de cadastro, localização,
+  busca por acentos, rascunho, exportação/restauração de backup e filtros de local.
+  Os dados ficam no aparelho. Não há conta, anúncios, rastreamento, reconhecimento
+  automático de imagens ou serviço de nuvem. Faça backups antes de desinstalar.
+
+SourceCode: https://github.com/alunoadsnoite/onde-guardei
+WebSite: https://github.com/alunoadsnoite/onde-guardei
+IssueTracker: https://github.com/alunoadsnoite/onde-guardei/issues
+Changelog: https://github.com/alunoadsnoite/onde-guardei/blob/HEAD/CHANGELOG.md
+
+RepoType: git
+Repo: https://github.com/alunoadsnoite/onde-guardei.git
+
+Builds:
+  - versionName: 0.3.1
+    versionCode: 3
+    commit: v0.3.1
+    output: build/app/outputs/apk/release/app-release.apk
+    srclibs:
+      - flutter@3.47.7
+    build:
+      - $$flutter$$/bin/flutter config --no-analytics
+      - $$flutter$$/bin/flutter packages pub get
+      - $$flutter$$/bin/flutter build apk --release
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+UpdateCheckData: pubspec.yaml|version:\s.+\+(\d+)|.|version:\s(.+)\+
+CurrentVersion: 0.3.1
+CurrentVersionCode: 3
