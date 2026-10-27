@@ -41,11 +41,11 @@ jobs:
           NOME="Onde-Guardei-${VERSION}.apk"
           mv apk/app-release.apk "apk/${NOME}"
           TAG="v${VERSION}-preview"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "apk/${NOME}" --clobber
+          TARGET="${{ github.event.workflow_run.head_sha || github.sha }}"
+          if gh release upload "$TAG" "apk/${NOME}" --clobber 2>/dev/null; then
             echo "APK atualizado em ${TAG}"
             exit 0
           fi
-          gh release create "$TAG" "apk/${NOME}" --prerelease --target "${{ github.event.workflow_run.head_sha || github.sha }}" \
+          gh release create "$TAG" "apk/${NOME}" --prerelease --target "$TARGET" \
             --title "Onde Guardei? ${VERSION} — versão de teste" \
             --notes "Versão de teste para Android 7 ou mais recente. Catálogo offline com fotos, locais organizados, busca, histórico de mudanças, rascunho, backup com fotos, limpeza de fotos órfãs e testes automatizados. APK com assinatura de teste; câmera e seletor de arquivos precisam de validação em aparelho físico. Consulte docs/TESTE-NO-CELULAR.md."
