@@ -1,0 +1,1 @@
+Preserve photos needed by recovery and reject exports with missing photos.

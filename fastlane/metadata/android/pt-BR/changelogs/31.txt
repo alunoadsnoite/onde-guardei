@@ -1,0 +1,1 @@
+Preserva fotos na cópia de recuperação e recusa backups com fotos ausentes.

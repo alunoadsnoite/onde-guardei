@@ -1,43 +1,86 @@
 Categories:
   - Inventory
-
 License: MIT
-
-Name: Onde Guardei?
-
-Summary: |
-  App Android para encontrar objetos guardados em casa com fotos e dados locais
-
-Description: |
-  Aplicativo Android para armazenar e localizar objetos guardados em casa.
-  Cadastre uma foto, um nome ou ambos e informe onde o objeto está: quarto →
-  armário → caixa, por exemplo. Com recursos de cadastro, localização,
-  busca por acentos, rascunho, exportação/restauração de backup e filtros de local.
-  Os dados ficam no aparelho. Não há conta, anúncios, rastreamento, reconhecimento
-  automático de imagens ou serviço de nuvem. Faça backups antes de desinstalar.
-
+AuthorName: Valdenor
 SourceCode: https://github.com/alunoadsnoite/onde-guardei
-WebSite: https://github.com/alunoadsnoite/onde-guardei
 IssueTracker: https://github.com/alunoadsnoite/onde-guardei/issues
-Changelog: https://github.com/alunoadsnoite/onde-guardei/blob/HEAD/CHANGELOG.md
+Changelog: https://github.com/alunoadsnoite/onde-guardei/releases
+
+AutoName: Onde Guardei?
 
 RepoType: git
 Repo: https://github.com/alunoadsnoite/onde-guardei.git
 
 Builds:
   - versionName: 0.3.1
-    versionCode: 3
-    commit: v0.3.1
-    output: build/app/outputs/apk/release/app-release.apk
+    versionCode: 31
+    commit: b5256a393bd4af0a87f8878ef90edb967bd77e41
+    output: build/app/outputs/flutter-apk/app-release.apk
     srclibs:
-      - flutter@3.47.7
-    build:
+      - flutter@abaf9c523780a608bd46686fd5e53740a07077f8
+    rm:
+      - ios
+    prebuild:
+      - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' android/app/build.gradle.kts
+      - export PUB_CACHE=$(pwd)/.pub-cache
       - $$flutter$$/bin/flutter config --no-analytics
-      - $$flutter$$/bin/flutter packages pub get
-      - $$flutter$$/bin/flutter build apk --release
+      - $$flutter$$/bin/flutter pub get --enforce-lockfile
+    scandelete:
+      - .pub-cache
+    build:
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter build apk --release --target-platform=android-arm
+        --build-number=$$VERCODE$$
+    ndk: 28.2.13676358
 
-AutoUpdateMode: Version v%v
-UpdateCheckMode: Tags
+  - versionName: 0.3.1
+    versionCode: 32
+    commit: b5256a393bd4af0a87f8878ef90edb967bd77e41
+    output: build/app/outputs/flutter-apk/app-release.apk
+    srclibs:
+      - flutter@abaf9c523780a608bd46686fd5e53740a07077f8
+    rm:
+      - ios
+    prebuild:
+      - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' android/app/build.gradle.kts
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter config --no-analytics
+      - $$flutter$$/bin/flutter pub get --enforce-lockfile
+    scandelete:
+      - .pub-cache
+    build:
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter build apk --release --target-platform=android-arm64
+        --build-number=$$VERCODE$$
+    ndk: 28.2.13676358
+
+  - versionName: 0.3.1
+    versionCode: 33
+    commit: b5256a393bd4af0a87f8878ef90edb967bd77e41
+    output: build/app/outputs/flutter-apk/app-release.apk
+    srclibs:
+      - flutter@abaf9c523780a608bd46686fd5e53740a07077f8
+    rm:
+      - ios
+    prebuild:
+      - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' android/app/build.gradle.kts
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter config --no-analytics
+      - $$flutter$$/bin/flutter pub get --enforce-lockfile
+    scandelete:
+      - .pub-cache
+    build:
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter build apk --release --target-platform=android-x64
+        --build-number=$$VERCODE$$
+    ndk: 28.2.13676358
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
+VercodeOperation:
+  - 10 * %c + 1
+  - 10 * %c + 2
+  - 10 * %c + 3
 UpdateCheckData: pubspec.yaml|version:\s.+\+(\d+)|.|version:\s(.+)\+
 CurrentVersion: 0.3.1
-CurrentVersionCode: 3
+CurrentVersionCode: 33

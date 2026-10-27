@@ -1,0 +1,7 @@
+Cadastre objetos com foto, nome ou ambos e informe onde estão guardados. Organize locais dentro de outros locais, busque por nomes e caminhos sem depender de acentos e registre mudanças de lugar.
+
+Inclui rascunhos para continuar cadastros e backup com fotos pelo seletor de arquivos Android. A restauração substitui o catálogo após confirmação. Fotos indisponíveis precisam ser corrigidas antes de exportar.
+
+Funciona offline, sem conta, anúncios, rastreamento ou serviço de nuvem. Os dados ficam no aparelho. Backups não são criptografados: guarde-os em local adequado à privacidade das fotos. A desinstalação remove os dados privados.
+
+Interface disponível em português do Brasil.
