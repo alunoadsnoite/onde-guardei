@@ -1,0 +1,51 @@
+# Request for Packaging - Onde Guardei?
+
+**URL do projeto:** https://github.com/alunoadsnoite/onde-guardei
+**Título da versão:** 0.3.1
+**Versão atual:** 0.3.1
+**Categoria:** Inventory
+
+## Descrição
+
+Aplicativo Android para armazenar e localizar objetos guardados em casa.
+Cadastre uma foto, um nome ou ambos e informe onde o objeto está: quarto →
+armário → caixa, por exemplo. Com recursos de cadastro, localização,
+busca por acentos, rascunho, exportação/restauração de backup e filtros de local.
+Os dados ficam no aparelho. Não há conta, anúncios, rastreamento, reconhecimento
+automático de imagens ou serviço de nuvem. Faça backups antes de desinstalar.
+
+## Repositório
+
+- Repositório Git: https://github.com/alunoadsnoite/onde-guardei.git
+- Licença: MIT
+- Página do app: https://github.com/alunoadsnoite/onde-guardei
+- IssueTracker: https://github.com/alunoadsnoite/onde-guardei/issues
+- Changelog: https://github.com/alunoadsnoite/onde-guardei/blob/HEAD/CHANGELOG.md
+
+## Build
+
+- Build Tool: Flutter
+- Versão do Flutter: 3.47.7
+- Comando de build: `flutter build apk --release`
+- Código-fonte: https://github.com/alunoadsnoite/onde-guardei.git
+
+## Changelog
+
+Ver https://github.com/alunoadsnoite/onde-guardei/blob/HEAD/CHANGELOG.md
+
+## Verificações de inclusão
+
+- [x] O app não contém serviços de telemetria, anúncios ou rastreamento.
+- [x] Os dados ficam no aparelho (nenhuma nuvem ou conta externa).
+- [x] O app não requer permissões sensíveis além do necessário.
+- [x] O código-fonte está disponível e compilavel.
+- [x] O app está licenciado sob a licença MIT.
+
+## Estado atual
+
+Esta é uma submissão de um novo app para adicionar ao repositório F-Droid.
+O app já possui metadados preparados no repositório original:
+- `fdroid.yml` (no root do repo)
+- `metadata/br.com.valdenor.ondeguardei.yml` (no repo original)
+
+O repositório está disponível para compilação. O F-Droid pode usar o `fdroid.yml` existente ou criar os metadados conforme necessário.
