@@ -14,14 +14,17 @@ Repo: https://github.com/alunoadsnoite/onde-guardei.git
 Builds:
   - versionName: 0.3.1
     versionCode: 31
-    commit: b5256a393bd4af0a87f8878ef90edb967bd77e41
+    commit: e0104fe546a925612dde78d2875e6524bbb087ab
     output: build/app/outputs/flutter-apk/app-release.apk
     srclibs:
-      - flutter@abaf9c523780a608bd46686fd5e53740a07077f8
+      - flutter@stable
     rm:
       - ios
     prebuild:
       - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' android/app/build.gradle.kts
+      - flutterVersion=$(cat .flutter-version)
+      - '[[ $flutterVersion ]]'
+      - git -C $$flutter$$ checkout -f "$flutterVersion"
       - export PUB_CACHE=$(pwd)/.pub-cache
       - $$flutter$$/bin/flutter config --no-analytics
       - $$flutter$$/bin/flutter pub get --enforce-lockfile
@@ -35,14 +38,17 @@ Builds:
 
   - versionName: 0.3.1
     versionCode: 32
-    commit: b5256a393bd4af0a87f8878ef90edb967bd77e41
+    commit: e0104fe546a925612dde78d2875e6524bbb087ab
     output: build/app/outputs/flutter-apk/app-release.apk
     srclibs:
-      - flutter@abaf9c523780a608bd46686fd5e53740a07077f8
+      - flutter@stable
     rm:
       - ios
     prebuild:
       - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' android/app/build.gradle.kts
+      - flutterVersion=$(cat .flutter-version)
+      - '[[ $flutterVersion ]]'
+      - git -C $$flutter$$ checkout -f "$flutterVersion"
       - export PUB_CACHE=$(pwd)/.pub-cache
       - $$flutter$$/bin/flutter config --no-analytics
       - $$flutter$$/bin/flutter pub get --enforce-lockfile
@@ -56,14 +62,17 @@ Builds:
 
   - versionName: 0.3.1
     versionCode: 33
-    commit: b5256a393bd4af0a87f8878ef90edb967bd77e41
+    commit: e0104fe546a925612dde78d2875e6524bbb087ab
     output: build/app/outputs/flutter-apk/app-release.apk
     srclibs:
-      - flutter@abaf9c523780a608bd46686fd5e53740a07077f8
+      - flutter@stable
     rm:
       - ios
     prebuild:
       - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' android/app/build.gradle.kts
+      - flutterVersion=$(cat .flutter-version)
+      - '[[ $flutterVersion ]]'
+      - git -C $$flutter$$ checkout -f "$flutterVersion"
       - export PUB_CACHE=$(pwd)/.pub-cache
       - $$flutter$$/bin/flutter config --no-analytics
       - $$flutter$$/bin/flutter pub get --enforce-lockfile
