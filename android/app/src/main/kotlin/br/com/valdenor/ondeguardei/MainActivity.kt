@@ -1,7 +1,9 @@
 package br.com.valdenor.ondeguardei
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -24,6 +26,26 @@ class MainActivity : FlutterActivity() {
                 try {
                     when (call.method) {
                         "dataDirectory" -> result.success(filesDir.absolutePath)
+                        "readThemeMode" -> result.success(
+                            getPreferences(MODE_PRIVATE).getString("themeMode", null)
+                        )
+                        "writeThemeMode" -> {
+                            val mode = call.arguments as String
+                            require(mode in setOf("system", "light", "dark"))
+                            getPreferences(MODE_PRIVATE).edit().putString("themeMode", mode).apply()
+                            result.success(null)
+                        }
+                        "openEmail" -> {
+                            val address = requireNotNull(call.argument<String>("address"))
+                            val subject = requireNotNull(call.argument<String>("subject"))
+                            val uri = Uri.parse("mailto:${Uri.encode(address, "@")}?subject=${Uri.encode(subject)}")
+                            try {
+                                startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                                result.success(true)
+                            } catch (_: ActivityNotFoundException) {
+                                result.success(false)
+                            }
+                        }
                         "exportBackup" -> {
                             val path = call.argument<String>("path") ?: error("Arquivo ausente")
                             val source = File(path).canonicalFile

@@ -1,0 +1,1 @@
+Developer contact in About and Support. Clearer search and place selection by parts of the path. Item editing explains the optional photo. Item details confirm moves and show the last update. Light, dark, or automatic appearance.

@@ -68,6 +68,10 @@ String normalize(String text) {
 /// Texto sem acento em minúsculas, usado para ordenar e comparar.
 String folded(String text) => normalize(text).trim().toLowerCase();
 
+List<String> searchWords(String query) => normalize(
+  query,
+).split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
+
 class Place {
   final String id, name;
   final String? parentId;
@@ -203,9 +207,7 @@ class Catalog {
   }
 
   List<StoredItem> search(String query, {String? placeId}) {
-    final words = normalize(
-      query,
-    ).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = searchWords(query);
     final byId = placeIndex;
     final found = <StoredItem>[];
     for (final item in items) {

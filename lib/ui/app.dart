@@ -6,43 +6,95 @@ import 'package:onde_guardei/ui/home.dart';
 const nativeFiles = MethodChannel('br.com.valdenor.ondeguardei/files');
 
 /// Versão mostrada ao usuário. Mantenha em sincronia com `pubspec.yaml`.
-const appVersion = '0.3.1';
+const appVersion = '0.4.0';
 const appName = 'Onde Guardei?';
 
-ThemeData appTheme() => ThemeData(
-  useMaterial3: true,
-  scaffoldBackgroundColor: Color(0xFFF7F5EF),
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: Color(0xFF234B40),
-    primary: Color(0xFF234B40),
-    surface: Color(0xFFF7F5EF),
-  ),
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFFF7F5EF),
-    foregroundColor: Color(0xFF263C35),
-    centerTitle: false,
-  ),
-  inputDecorationTheme: InputDecorationTheme(
-    filled: true,
-    fillColor: Colors.white,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-  ),
-  filledButtonTheme: FilledButtonThemeData(
-    style: FilledButton.styleFrom(
-      minimumSize: const Size(48, 52),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
-  ),
-);
+ThemeData appTheme([Brightness brightness = Brightness.light]) {
+  const green = Color(0xFF234B40);
+  final generated = ColorScheme.fromSeed(
+    seedColor: green,
+    brightness: brightness,
+  );
+  final colors = brightness == Brightness.light
+      ? generated.copyWith(
+          primary: green,
+          surface: const Color(0xFFF7F5EF),
+          onSurface: const Color(0xFF263C35),
+          surfaceContainerLowest: Colors.white,
+          secondaryContainer: const Color(0xFFE8EDE5),
+          onSecondaryContainer: green,
+        )
+      : generated;
 
-class OndeGuardeiApp extends StatelessWidget {
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: colors,
+    scaffoldBackgroundColor: colors.surface,
+    appBarTheme: AppBarTheme(
+      backgroundColor: colors.surface,
+      foregroundColor: colors.onSurface,
+      centerTitle: false,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: colors.surfaceContainerLowest,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    ),
+  );
+}
+
+Future<ThemeMode> readThemeMode() async {
+  try {
+    final saved = await nativeFiles.invokeMethod<String>('readThemeMode');
+    return ThemeMode.values.firstWhere(
+      (mode) => mode.name == saved,
+      orElse: () => ThemeMode.system,
+    );
+  } on PlatformException {
+    return ThemeMode.system;
+  } on MissingPluginException {
+    return ThemeMode.system;
+  }
+}
+
+class OndeGuardeiApp extends StatefulWidget {
   final CatalogRepository repository;
-  const OndeGuardeiApp({super.key, required this.repository});
+  final ThemeMode initialThemeMode;
+  const OndeGuardeiApp({
+    super.key,
+    required this.repository,
+    this.initialThemeMode = ThemeMode.system,
+  });
+
+  @override
+  State<OndeGuardeiApp> createState() => _OndeGuardeiAppState();
+}
+
+class _OndeGuardeiAppState extends State<OndeGuardeiApp> {
+  late ThemeMode themeMode = widget.initialThemeMode;
+
+  Future<void> setThemeMode(ThemeMode value) async {
+    await nativeFiles.invokeMethod<void>('writeThemeMode', value.name);
+    if (mounted) setState(() => themeMode = value);
+  }
+
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Onde Guardei?',
+    title: appName,
     debugShowCheckedModeBanner: false,
     theme: appTheme(),
-    home: Home(repository),
+    darkTheme: appTheme(Brightness.dark),
+    themeMode: themeMode,
+    home: Home(
+      widget.repository,
+      themeMode: themeMode,
+      onThemeChanged: setThemeMode,
+    ),
   );
 }

@@ -1,3 +1,11 @@
+## 0.4.0
+
+- Adiciona os modos de aparência Claro, Escuro e Automático nas configurações.
+- Adiciona o contato do desenvolvedor em **Sobre e suporte**.
+- Explicita a busca por nome, local e anotação. O seletor de locais aceita palavras de diferentes partes do caminho e destaca o local atual.
+- Indica que a foto do cadastro pode mostrar o objeto ou o local.
+- Confirma a mudança de local e mostra a data da última alteração na ficha do objeto.
+
 ## 0.3.1
 
 - Preserva as fotos usadas pela cópia de recuperação do catálogo; remove-as somente depois de essa cópia ser substituída.

@@ -192,6 +192,11 @@ class _ItemEditorState extends State<ItemEditor> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
             children: [
+              Text(
+                'Foto opcional do objeto ou de onde ele fica',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: SizedBox(
@@ -252,7 +257,8 @@ class _ItemEditorState extends State<ItemEditor> {
                         final selected = await Navigator.push<String>(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => PlacePicker(widget.repo),
+                            builder: (_) =>
+                                PlacePicker(widget.repo, selectedId: place),
                           ),
                         );
                         if (selected != null && mounted) {
@@ -313,6 +319,7 @@ class ItemDetail extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: repo,
     builder: (context, _) {
+      final colors = Theme.of(context).colorScheme;
       final i = repo.data.items.where((i) => i.id == id).firstOrNull;
       if (i == null) {
         return const Scaffold(
@@ -398,28 +405,28 @@ class ItemDetail extends StatelessWidget {
                 ),
               Text(
                 i.title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF263C35),
+                  color: colors.onSurface,
                 ),
               ),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Color(0xFF234B40).withValues(alpha: .08),
+                  color: colors.primary.withValues(alpha: .08),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'ONDE ESTÁ',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
-                        color: Color(0xFF234B40),
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -437,14 +444,19 @@ class ItemDetail extends StatelessWidget {
                       onPressed: () async {
                         final selected = await Navigator.push<String>(
                           context,
-                          MaterialPageRoute(builder: (_) => PlacePicker(repo)),
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PlacePicker(repo, selectedId: i.placeId),
+                          ),
                         );
-                        if (selected == null) return;
+                        if (selected == null || !context.mounted) return;
+                        final nextPlace = selected.isEmpty ? null : selected;
+                        if (nextPlace == i.placeId) return;
                         try {
-                          await repo.moveItem(
-                            id,
-                            selected.isEmpty ? null : selected,
-                          );
+                          await repo.moveItem(id, nextPlace);
+                          if (context.mounted) {
+                            message(context, 'Local atualizado.');
+                          }
                         } catch (e) {
                           if (context.mounted) message(context, errorText(e));
                         }
@@ -477,8 +489,13 @@ class ItemDetail extends StatelessWidget {
               const SizedBox(height: 24),
               Text(
                 'Cadastrado em ${dateText(i.createdAt)}',
-                style: TextStyle(color: Colors.grey.shade700),
+                style: TextStyle(color: colors.onSurfaceVariant),
               ),
+              if (i.updatedAt.isAfter(i.createdAt))
+                Text(
+                  'Última alteração em ${dateText(i.updatedAt)}',
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
               if (i.moves.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 const Text(
@@ -488,9 +505,9 @@ class ItemDetail extends StatelessWidget {
                 ...i.moves.reversed.map(
                   (m) => ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.history,
-                      color: Color(0xFF234B40),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     title: Text(m.to),
                     subtitle: Text('${dateText(m.at)} · antes: ${m.from}'),
@@ -561,10 +578,10 @@ class _PlaceEditorState extends State<PlaceEditor> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            const Icon(
+            Icon(
               Icons.folder_copy_outlined,
               size: 56,
-              color: Color(0xFF234B40),
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 24),
             TextFormField(
@@ -600,6 +617,7 @@ class _PlaceEditorState extends State<PlaceEditor> {
                           builder: (_) => PlacePicker(
                             widget.repo,
                             excluded: widget.place?.id ?? 'new',
+                            selectedId: parent,
                           ),
                         ),
                       );
@@ -650,7 +668,8 @@ class _PlaceEditorState extends State<PlaceEditor> {
 class PlacePicker extends StatefulWidget {
   final CatalogRepository repo;
   final String? excluded;
-  const PlacePicker(this.repo, {super.key, this.excluded});
+  final String? selectedId;
+  const PlacePicker(this.repo, {super.key, this.excluded, this.selectedId});
   @override
   State<PlacePicker> createState() => _PlacePickerState();
 }
@@ -658,28 +677,20 @@ class PlacePicker extends StatefulWidget {
 class _PlacePickerState extends State<PlacePicker> {
   String query = '';
 
-  bool allowed(Place p) {
-    var current = p.id;
-    final seen = <String>{};
-    while (seen.add(current)) {
-      if (current == widget.excluded) return false;
-      final parent = widget.repo.data.places
-          .where((p) => p.id == current)
-          .firstOrNull
-          ?.parentId;
-      if (parent == null) break;
-      current = parent;
-    }
-    return normalize(widget.repo.data.path(p.id)).contains(normalize(query));
-  }
-
   @override
   Widget build(BuildContext context) {
-    final places = widget.repo.data.places.where(allowed).toList()
-      ..sort(
-        (a, b) =>
-            widget.repo.data.path(a.id).compareTo(widget.repo.data.path(b.id)),
-      );
+    final catalog = widget.repo.data;
+    final words = searchWords(query);
+    final places =
+        catalog.places.where((place) {
+            if (widget.excluded != null &&
+                catalog.isInside(place.id, widget.excluded)) {
+              return false;
+            }
+            final path = normalize(catalog.path(place.id));
+            return words.every(path.contains);
+          }).toList()
+          ..sort((a, b) => catalog.path(a.id).compareTo(catalog.path(b.id)));
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -694,7 +705,7 @@ class _PlacePickerState extends State<PlacePicker> {
               child: TextField(
                 onChanged: (s) => setState(() => query = s),
                 decoration: const InputDecoration(
-                  labelText: 'Buscar local',
+                  labelText: 'Buscar por parte do caminho',
                   prefixIcon: Icon(Icons.search),
                 ),
               ),
@@ -709,13 +720,21 @@ class _PlacePickerState extends State<PlacePicker> {
                           ? 'Sem local definido'
                           : 'Na raiz da casa',
                     ),
+                    selected: widget.selectedId == null,
                     onTap: () => Navigator.pop(context, ''),
                   ),
                   ...places.map(
                     (p) => ListTile(
                       leading: const Icon(Icons.folder_outlined),
                       title: Text(p.name),
-                      subtitle: Text(widget.repo.data.path(p.id)),
+                      subtitle: Text(catalog.path(p.id)),
+                      selected: p.id == widget.selectedId,
+                      trailing: p.id == widget.selectedId
+                          ? const Icon(
+                              Icons.check,
+                              semanticLabel: 'Selecionado',
+                            )
+                          : null,
                       onTap: () => Navigator.pop(context, p.id),
                     ),
                   ),

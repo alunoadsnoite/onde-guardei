@@ -9,26 +9,29 @@ class PhotoView extends StatelessWidget {
   final int? cacheWidth;
   const PhotoView(this.repo, this.photo, {super.key, this.cacheWidth});
   @override
-  Widget build(BuildContext context) => photo == null
-      ? const ColoredBox(
-          color: Color(0xFFE8EDE5),
-          child: Center(
-            child: Icon(
-              Icons.inventory_2_outlined,
-              color: Color(0xFF234B40),
-              size: 38,
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return photo == null
+        ? ColoredBox(
+            color: colors.secondaryContainer,
+            child: Center(
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: colors.onSecondaryContainer,
+                size: 38,
+              ),
             ),
-          ),
-        )
-      : Image.file(
-          repo.photoFile(photo!),
-          fit: BoxFit.cover,
-          cacheWidth: cacheWidth,
-          filterQuality: FilterQuality.medium,
-          errorBuilder: (_, _, _) => const Center(
-            child: Icon(Icons.broken_image_outlined, color: Color(0xFF234B40)),
-          ),
-        );
+          )
+        : Image.file(
+            repo.photoFile(photo!),
+            fit: BoxFit.cover,
+            cacheWidth: cacheWidth,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (_, _, _) => Center(
+              child: Icon(Icons.broken_image_outlined, color: colors.primary),
+            ),
+          );
+  }
 }
 
 class EmptyState extends StatelessWidget {
@@ -41,38 +44,41 @@ class EmptyState extends StatelessWidget {
     required this.text,
   });
   @override
-  Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Color(0xFF234B40).withValues(alpha: .08),
-              shape: BoxShape.circle,
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: .08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 48, color: colors.primary),
             ),
-            child: Icon(icon, size: 48, color: Color(0xFF234B40)),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 23,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF263C35),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 23,
+                fontWeight: FontWeight.w700,
+                color: colors.onSurface,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, height: 1.5),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

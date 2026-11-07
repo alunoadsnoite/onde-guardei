@@ -16,8 +16,8 @@ class Bootstrap extends StatefulWidget {
 }
 
 class _BootstrapState extends State<Bootstrap> {
-  late Future<CatalogRepository> future = open();
-  Future<CatalogRepository> open() async {
+  late Future<(CatalogRepository, ThemeMode)> future = open();
+  Future<(CatalogRepository, ThemeMode)> open() async {
     final root = Directory(
       (await nativeFiles.invokeMethod<String>('dataDirectory'))!,
     );
@@ -37,16 +37,24 @@ class _BootstrapState extends State<Bootstrap> {
             'Não foi possível recuperar a última foto. Você pode selecioná-la novamente.';
       }
     }
-    return repo;
+    return (repo, await readThemeMode());
   }
 
   @override
   Widget build(BuildContext context) => FutureBuilder(
     future: future,
     builder: (context, snapshot) {
-      if (snapshot.hasData) return OndeGuardeiApp(repository: snapshot.data!);
+      final data = snapshot.data;
+      if (data != null) {
+        final (repository, themeMode) = data;
+        return OndeGuardeiApp(
+          repository: repository,
+          initialThemeMode: themeMode,
+        );
+      }
       return MaterialApp(
         theme: appTheme(),
+        darkTheme: appTheme(Brightness.dark),
         home: Scaffold(
           body: SafeArea(
             child: Center(
@@ -56,11 +64,7 @@ class _BootstrapState extends State<Bootstrap> {
                     ? Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.folder_off_outlined,
-                            size: 48,
-                            color: Color(0xFF234B40),
-                          ),
+                          const Icon(Icons.folder_off_outlined, size: 48),
                           const SizedBox(height: 20),
                           const Text(
                             'Não conseguimos abrir seu catálogo.',

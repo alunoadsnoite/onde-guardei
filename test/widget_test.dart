@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onde_guardei/domain/models.dart';
 import 'package:onde_guardei/domain/repository.dart';
@@ -37,6 +38,112 @@ Future<Directory> tempDir() async =>
     (await Directory.systemTemp.createTemp('onde-ui-'));
 
 void main() {
+  testWidgets('aparência acompanha o aparelho e guarda os três modos', (
+    tester,
+  ) async {
+    final repo = ScreenRepository(Directory.systemTemp);
+    addTearDown(repo.dispose);
+    final dispatcher = tester.binding.platformDispatcher;
+    dispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(dispatcher.clearPlatformBrightnessTestValue);
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    String? savedMode;
+    messenger.setMockMethodCallHandler(nativeFiles, (call) async {
+      switch (call.method) {
+        case 'readThemeMode':
+          return savedMode;
+        case 'writeThemeMode':
+          savedMode = call.arguments as String;
+          return null;
+      }
+      throw MissingPluginException();
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(nativeFiles, null));
+
+    await tester.pumpWidget(OndeGuardeiApp(repository: repo));
+    await tester.pumpAndSettle();
+    Brightness brightness() =>
+        Theme.of(tester.element(find.byType(Home))).brightness;
+    expect(brightness(), Brightness.dark);
+
+    Future<void> choose(String label) async {
+      await tester.tap(find.byTooltip('Configurações e backup'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aparência'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    await choose('Claro');
+    expect(await readThemeMode(), ThemeMode.light);
+    expect(brightness(), Brightness.light);
+
+    await choose('Escuro');
+    expect(await readThemeMode(), ThemeMode.dark);
+    expect(brightness(), Brightness.dark);
+
+    dispatcher.platformBrightnessTestValue = Brightness.light;
+    await tester.pumpAndSettle();
+    expect(brightness(), Brightness.dark);
+    await choose('Automático');
+    expect(await readThemeMode(), ThemeMode.system);
+    expect(brightness(), Brightness.light);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('suporte mostra o desenvolvedor e abre um e-mail', (
+    tester,
+  ) async {
+    final repo = ScreenRepository(Directory.systemTemp);
+    addTearDown(repo.dispose);
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodCall? emailCall;
+    messenger.setMockMethodCallHandler(nativeFiles, (call) async {
+      emailCall = call;
+      return true;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(nativeFiles, null));
+
+    await tester.pumpWidget(OndeGuardeiApp(repository: repo));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Configurações e backup'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sobre e suporte'));
+    await tester.pumpAndSettle();
+    expect(find.text('Valdenor Tavares'), findsOneWidget);
+    expect(find.text('valdenor.sa@proton.me'), findsOneWidget);
+    await tester.tap(find.text('Enviar e-mail'));
+    await tester.pumpAndSettle();
+    expect(emailCall?.method, 'openEmail');
+    expect(emailCall?.arguments['address'], 'valdenor.sa@proton.me');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('busca partes do caminho e destaca o local selecionado', (
+    tester,
+  ) async {
+    final repo = ScreenRepository(Directory.systemTemp)
+      ..data = const Catalog(
+        places: [
+          Place(id: 'quarto', name: 'Quarto'),
+          Place(id: 'armario', name: 'Armário', parentId: 'quarto'),
+          Place(id: 'gaveta', name: 'Segunda gaveta', parentId: 'armario'),
+        ],
+      );
+    addTearDown(repo.dispose);
+    await tester.pumpWidget(
+      MaterialApp(home: PlacePicker(repo, selectedId: 'gaveta')),
+    );
+    await tester.enterText(find.byType(TextField), 'gaveta armario');
+    await tester.pumpAndSettle();
+    final result = find.widgetWithText(ListTile, 'Segunda gaveta');
+    expect(tester.widget<ListTile>(result).selected, isTrue);
+    expect(find.widgetWithText(ListTile, 'Armário'), findsNothing);
+  });
+
   testWidgets('cadastra objeto e volta para a lista após salvar', (
     tester,
   ) async {
@@ -85,7 +192,11 @@ void main() {
             size: Size(360, 640),
             textScaler: TextScaler.linear(2),
           ),
-          child: Home(repo),
+          child: Home(
+            repo,
+            themeMode: ThemeMode.system,
+            onThemeChanged: (_) async {},
+          ),
         ),
       ),
     );

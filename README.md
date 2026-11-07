@@ -5,7 +5,7 @@ nome ou ambos e informe onde o objeto está: quarto → armário → caixa, por 
 
 ## Instalação e atualização
 
-Baixe a [versão estável 0.3.1](https://github.com/alunoadsnoite/onde-guardei/releases/tag/v0.3.1). Ela preserva o certificado da estável 0.2.0 e foi testada em atualização direta, sem desinstalação, com dados e foto fictícios. As prévias 0.3.0/0.3.1 usam outro certificado: leia o [guia de migração](docs/MIGRACAO.md) antes de trocar de canal.
+Baixe a [versão estável 0.4.0](https://github.com/alunoadsnoite/onde-guardei/releases/tag/v0.4.0). O APK estável usa o certificado da versão 0.2.0. Antes de trocar entre os canais estável, de teste e do F-Droid, consulte o [guia de migração](docs/MIGRACAO.md).
 
 ## Recursos
 
@@ -13,6 +13,7 @@ Baixe a [versão estável 0.3.1](https://github.com/alunoadsnoite/onde-guardei/r
 - Locais organizados dentro de outros locais, com caminho sempre visível.
 - Busca sem distinção de acentos, inclusive pelo caminho do local.
 - Ação **Mudei de lugar**, com histórico das mudanças.
+- Aparência clara, escura ou automática e contato do desenvolvedor nas configurações.
 - Rascunho para continuar um cadastro depois, inclusive se o app for fechado.
 - Exportação e restauração de backup com as fotos incluídas.
 - Filtro de local com chip explícito e limpeza de fotos órfãs.
@@ -52,7 +53,7 @@ caminho `dist/` fica fora do controle de versão.
 
 ## Backup
 
-Em **Backup e informações**, exporte o arquivo para uma pasta escolhida. A
+Em **Configurações e backup**, exporte o arquivo para uma pasta escolhida. A
 restauração substitui os cadastros atuais após confirmação. Nesta versão cada
 foto pode ter até 15 MiB, o conjunto de fotos exportadas até 70 MiB e o arquivo
 importado até 100 MiB. O aplicativo mantém também uma versão anterior do catálogo
