@@ -1,3 +1,4 @@
+import 'package:onde_guardei/ui/catalog_strings.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,12 +14,16 @@ const developerEmail = 'valdenor.sa@proton.me';
 class Home extends StatefulWidget {
   final CatalogRepository repo;
   final ThemeMode themeMode;
+  final AppLanguage language;
+  final Future<void> Function(AppLanguage) onLanguageChanged;
   final Future<void> Function(ThemeMode) onThemeChanged;
   const Home(
     this.repo, {
     super.key,
     required this.themeMode,
     required this.onThemeChanged,
+    required this.language,
+    required this.onLanguageChanged,
   });
   @override
   State<Home> createState() => _HomeState();
@@ -79,19 +84,27 @@ class _HomeState extends State<Home> {
     final selected = await showDialog<ThemeMode>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Aparência'),
+        title: Text(context.strings.text('Aparência')),
         children: [
           RadioGroup<ThemeMode>(
             groupValue: widget.themeMode,
             onChanged: (value) => Navigator.pop(context, value),
-            child: const Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                RadioListTile(title: Text('Claro'), value: ThemeMode.light),
-                RadioListTile(title: Text('Escuro'), value: ThemeMode.dark),
                 RadioListTile(
-                  title: Text('Automático'),
-                  subtitle: Text('Seguir a aparência do aparelho'),
+                  title: Text(context.strings.text('Claro')),
+                  value: ThemeMode.light,
+                ),
+                RadioListTile(
+                  title: Text(context.strings.text('Escuro')),
+                  value: ThemeMode.dark,
+                ),
+                RadioListTile(
+                  title: Text(context.strings.text('Automático')),
+                  subtitle: Text(
+                    context.strings.text('Seguir a aparência do aparelho'),
+                  ),
                   value: ThemeMode.system,
                 ),
               ],
@@ -108,11 +121,42 @@ class _HomeState extends State<Home> {
     }
   }
 
+  Future<void> chooseLanguage() async {
+    final selected = await showDialog<AppLanguage>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(context.strings.text('Idioma')),
+        children: [
+          RadioGroup<AppLanguage>(
+            groupValue: widget.language,
+            onChanged: (value) => Navigator.pop(context, value),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final language in AppLanguage.values)
+                  RadioListTile<AppLanguage>(
+                    value: language,
+                    title: Text(language.label),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null || selected == widget.language) return;
+    try {
+      await widget.onLanguageChanged(selected);
+    } catch (_) {
+      if (mounted) message(context, 'Não foi possível salvar o idioma.');
+    }
+  }
+
   void showSupport() {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sobre e suporte'),
+        title: Text(context.strings.text('Sobre e suporte')),
         scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -120,19 +164,19 @@ class _HomeState extends State<Home> {
           children: [
             const Text('$appName · $appVersion'),
             const SizedBox(height: 12),
-            const Text('Desenvolvedor'),
+            Text(context.strings.text('Desenvolvedor')),
             const Text('Valdenor Tavares'),
             const SelectableText(developerEmail),
             TextButton.icon(
               onPressed: emailDeveloper,
               icon: const Icon(Icons.email_outlined),
-              label: const Text('Enviar e-mail'),
+              label: Text(context.strings.text('Enviar e-mail')),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'O catálogo funciona sem conta e sem internet. Fotos e textos '
-              'ficam no aparelho. Guarde um backup fora do app antes de trocar '
-              'de celular ou desinstalar.\n\nCódigo aberto • licença MIT',
+            Text(
+              context.strings.text(
+                'O catálogo funciona sem conta e sem internet. Fotos e textos ficam no aparelho. Guarde um backup fora do app antes de trocar de celular ou desinstalar.\n\nCódigo aberto • licença MIT',
+              ),
             ),
           ],
         ),
@@ -143,11 +187,11 @@ class _HomeState extends State<Home> {
               applicationName: appName,
               applicationVersion: appVersion,
             ),
-            child: const Text('Licenças'),
+            child: Text(context.strings.text('Licenças')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
+            child: Text(context.strings.text('Fechar')),
           ),
         ],
       ),
@@ -158,7 +202,7 @@ class _HomeState extends State<Home> {
     try {
       final opened = await nativeFiles.invokeMethod<bool>('openEmail', {
         'address': developerEmail,
-        'subject': 'Onde Guardei? — dúvida ou sugestão',
+        'subject': context.strings.text('Onde Guardei? — dúvida ou sugestão'),
       });
       if (opened == true) return;
     } on PlatformException {
@@ -170,12 +214,12 @@ class _HomeState extends State<Home> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Não foi possível abrir o e-mail'),
+        title: Text(context.strings.text('Não foi possível abrir o e-mail')),
         content: const SelectableText(developerEmail),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
+            child: Text(context.strings.text('Fechar')),
           ),
         ],
       ),
@@ -220,7 +264,10 @@ class _HomeState extends State<Home> {
           message(
             context,
             result.missingPhotos > 0
-                ? 'Backup salvo, mas ${result.missingPhotos} foto(s) não estavam no aparelho e ficaram de fora.'
+                ? context.strings.text(
+                    'Backup salvo, mas {0} foto(s) não estavam no aparelho e ficaram de fora.',
+                    [result.missingPhotos],
+                  )
                 : 'Backup salvo com os cadastros e as fotos.',
           );
         }
@@ -254,7 +301,7 @@ class _HomeState extends State<Home> {
           ),
           actions: [
             PopupMenuButton<String>(
-              tooltip: 'Configurações e backup',
+              tooltip: context.strings.text('Configurações e backup'),
               enabled: !working,
               onSelected: (value) {
                 if (value == 'export') {
@@ -265,15 +312,29 @@ class _HomeState extends State<Home> {
                 }
                 if (value == 'appearance') chooseAppearance();
                 if (value == 'about') showSupport();
+                if (value == 'language') chooseLanguage();
               },
-              itemBuilder: (_) => const [
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'language',
+                  child: Text(context.strings.text('Idioma')),
+                ),
                 PopupMenuItem(
                   value: 'export',
-                  child: Text('Criar backup com fotos'),
+                  child: Text(context.strings.text('Criar backup com fotos')),
                 ),
-                PopupMenuItem(value: 'import', child: Text('Restaurar backup')),
-                PopupMenuItem(value: 'appearance', child: Text('Aparência')),
-                PopupMenuItem(value: 'about', child: Text('Sobre e suporte')),
+                PopupMenuItem(
+                  value: 'import',
+                  child: Text(context.strings.text('Restaurar backup')),
+                ),
+                PopupMenuItem(
+                  value: 'appearance',
+                  child: Text(context.strings.text('Aparência')),
+                ),
+                PopupMenuItem(
+                  value: 'about',
+                  child: Text(context.strings.text('Sobre e suporte')),
+                ),
               ],
             ),
           ],
@@ -281,13 +342,13 @@ class _HomeState extends State<Home> {
         body: SafeArea(
           top: false,
           child: working
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 20),
-                      Text('Cuidando do seu catálogo…'),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 20),
+                      Text(context.strings.text('Cuidando do seu catálogo…')),
                     ],
                   ),
                 )
@@ -301,7 +362,9 @@ class _HomeState extends State<Home> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Encontre o que você guardou.',
+                              context.strings.text(
+                                'Encontre o que você guardou.',
+                              ),
                               style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
@@ -310,7 +373,7 @@ class _HomeState extends State<Home> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${repo.data.items.length} objetos · ${repo.data.places.length} locais',
+                              '${itemCount(context, repo.data.items.length)} · ${placeCount(context, repo.data.places.length)}',
                               style: TextStyle(color: colors.primary),
                             ),
                             const SizedBox(height: 20),
@@ -319,13 +382,19 @@ class _HomeState extends State<Home> {
                               onChanged: (value) =>
                                   setState(() => query = value),
                               decoration: InputDecoration(
-                                hintText: 'Ex.: chave, gaveta ou reserva',
+                                hintText: context.strings.text(
+                                  'Ex.: chave, gaveta ou reserva',
+                                ),
                                 prefixIcon: const Icon(Icons.search),
-                                labelText: 'Buscar por nome, local ou anotação',
+                                labelText: context.strings.text(
+                                  'Buscar por nome, local ou anotação',
+                                ),
                                 suffixIcon: query.isEmpty
                                     ? null
                                     : IconButton(
-                                        tooltip: 'Limpar busca',
+                                        tooltip: context.strings.text(
+                                          'Limpar busca',
+                                        ),
                                         icon: const Icon(Icons.close),
                                         onPressed: () {
                                           search.clear();
@@ -351,12 +420,16 @@ class _HomeState extends State<Home> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        repo.recoveryNotice!,
+                                        context.strings.text(
+                                          repo.recoveryNotice!,
+                                        ),
                                         style: TextStyle(color: colors.error),
                                       ),
                                     ),
                                     IconButton(
-                                      tooltip: 'Dispensar aviso',
+                                      tooltip: context.strings.text(
+                                        'Dispensar aviso',
+                                      ),
                                       visualDensity: VisualDensity.compact,
                                       icon: const Icon(Icons.close, size: 20),
                                       onPressed: repo.dismissNotice,
@@ -370,8 +443,10 @@ class _HomeState extends State<Home> {
                                 child: OutlinedButton.icon(
                                   onPressed: () => edit(saved: draft),
                                   icon: const Icon(Icons.edit_note),
-                                  label: const Text(
-                                    'Continuar cadastro não salvo',
+                                  label: Text(
+                                    context.strings.text(
+                                      'Continuar cadastro não salvo',
+                                    ),
                                   ),
                                 ),
                               ),
@@ -388,11 +463,17 @@ class _HomeState extends State<Home> {
                               ? Icons.inventory_2_outlined
                               : Icons.search_off,
                           title: repo.data.items.isEmpty
-                              ? 'Um lugar para lembrar.'
-                              : 'Nada encontrado por aqui.',
+                              ? context.strings.text('Um lugar para lembrar.')
+                              : context.strings.text(
+                                  'Nada encontrado por aqui.',
+                                ),
                           text: repo.data.items.isEmpty
-                              ? 'Cadastre seu primeiro objeto com uma foto, um nome ou os dois. Depois, conte onde ele fica.'
-                              : 'Tente outra palavra ou escolha outro local.',
+                              ? context.strings.text(
+                                  'Cadastre seu primeiro objeto com uma foto, um nome ou os dois. Depois, conte onde ele fica.',
+                                )
+                              : context.strings.text(
+                                  'Tente outra palavra ou escolha outro local.',
+                                ),
                         ),
                       )
                     else
@@ -418,11 +499,12 @@ class _HomeState extends State<Home> {
                   ],
                 )
               : places.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.home_outlined,
-                  title: 'Como você organiza sua casa?',
-                  text:
-                      'Crie um cômodo, depois um móvel ou uma caixa dentro dele. Exemplo: quarto › armário › caixa azul.',
+                  title: context.strings.text('Como você organiza sua casa?'),
+                  text: context.strings.text(
+                    'Crie um cômodo, depois um móvel ou uma caixa dentro dele. Exemplo: quarto › armário › caixa azul.',
+                  ),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
@@ -445,12 +527,12 @@ class _HomeState extends State<Home> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         subtitle: Text(
-                          '${repo.data.path(p.id)}\n$count ${count == 1 ? 'objeto' : 'objetos'}, incluindo os locais de dentro',
+                          '${repo.data.path(p.id)}\n${context.strings.text(count == 1 ? '{0} objeto, incluindo os locais de dentro' : '{0} objetos, incluindo os locais de dentro', [count])}',
                         ),
                         isThreeLine: true,
                         onTap: () => filterByPlace(p.id),
                         trailing: IconButton(
-                          tooltip: 'Editar ${p.name}',
+                          tooltip: context.strings.text('Editar {0}', [p.name]),
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: () => Navigator.push(
                             context,
@@ -467,16 +549,16 @@ class _HomeState extends State<Home> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: tab,
           onDestinationSelected: (value) => setState(() => tab = value),
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.inventory_2_outlined),
-              selectedIcon: Icon(Icons.inventory_2),
-              label: 'Objetos',
+              icon: const Icon(Icons.inventory_2_outlined),
+              selectedIcon: const Icon(Icons.inventory_2),
+              label: context.strings.text('Objetos'),
             ),
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Locais',
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: context.strings.text('Locais'),
             ),
           ],
         ),
@@ -500,7 +582,11 @@ class _HomeState extends State<Home> {
                 backgroundColor: colors.primary,
                 foregroundColor: colors.onPrimary,
                 icon: const Icon(Icons.add),
-                label: Text(tab == 0 ? 'Guardar objeto' : 'Criar local'),
+                label: Text(
+                  tab == 0
+                      ? context.strings.text('Guardar objeto')
+                      : context.strings.text('Criar local'),
+                ),
               ),
       );
     },
@@ -540,7 +626,7 @@ class ObjectTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.title,
+                      itemTitle(context, item),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -549,7 +635,7 @@ class ObjectTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      repo.data.path(item.placeId),
+                      placePath(context, repo.data, item.placeId),
                       style: TextStyle(color: colors.primary),
                     ),
                     if (item.keywords.isNotEmpty)
