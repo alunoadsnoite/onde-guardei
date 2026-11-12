@@ -3,6 +3,10 @@
 Aplicativo Android para encontrar objetos guardados em casa. Cadastre uma foto, um
 nome ou ambos e informe onde o objeto está: quarto → armário → caixa, por exemplo.
 
+Em **Configurações e backup → Idioma**, escolha **Português (Brasil)**,
+**English** ou **Español**. A preferência fica salva no aparelho e funciona
+offline. Nomes, locais, anotações, fotos e backups permanecem no formato salvo.
+
 ## Instalação e atualização
 
 Baixe a [versão estável 0.4.0](https://github.com/alunoadsnoite/onde-guardei/releases/tag/v0.4.0). O APK estável usa o certificado da versão 0.2.0. Antes de trocar entre os canais estável, de teste e do F-Droid, consulte o [guia de migração](docs/MIGRACAO.md).

@@ -1,4 +1,6 @@
+import 'package:onde_guardei/ui/catalog_strings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:onde_guardei/domain/repository.dart';
 import 'package:onde_guardei/ui/home.dart';
@@ -63,13 +65,35 @@ Future<ThemeMode> readThemeMode() async {
   }
 }
 
+Future<AppLanguage> readAppLanguage() async {
+  try {
+    return AppLanguage.parse(
+      await nativeFiles.invokeMethod<String>('readLanguage'),
+    );
+  } on PlatformException {
+    return AppLanguage.portuguese;
+  } on MissingPluginException {
+    return AppLanguage.portuguese;
+  }
+}
+
+final supportedCatalogLocales = AppLanguage.values.map(
+  (language) => language.locale,
+);
+const catalogLocalizations = [
+  CatalogStrings.delegate,
+  ...GlobalMaterialLocalizations.delegates,
+];
+
 class OndeGuardeiApp extends StatefulWidget {
   final CatalogRepository repository;
   final ThemeMode initialThemeMode;
+  final AppLanguage initialLanguage;
   const OndeGuardeiApp({
     super.key,
     required this.repository,
     this.initialThemeMode = ThemeMode.system,
+    this.initialLanguage = AppLanguage.portuguese,
   });
 
   @override
@@ -78,6 +102,12 @@ class OndeGuardeiApp extends StatefulWidget {
 
 class _OndeGuardeiAppState extends State<OndeGuardeiApp> {
   late ThemeMode themeMode = widget.initialThemeMode;
+  late AppLanguage language = widget.initialLanguage;
+
+  Future<void> setLanguage(AppLanguage value) async {
+    await nativeFiles.invokeMethod<void>('writeLanguage', value.tag);
+    if (mounted) setState(() => language = value);
+  }
 
   Future<void> setThemeMode(ThemeMode value) async {
     await nativeFiles.invokeMethod<void>('writeThemeMode', value.name);
@@ -87,6 +117,9 @@ class _OndeGuardeiAppState extends State<OndeGuardeiApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: appName,
+    locale: language.locale,
+    supportedLocales: supportedCatalogLocales,
+    localizationsDelegates: catalogLocalizations,
     debugShowCheckedModeBanner: false,
     theme: appTheme(),
     darkTheme: appTheme(Brightness.dark),
@@ -95,6 +128,8 @@ class _OndeGuardeiAppState extends State<OndeGuardeiApp> {
       widget.repository,
       themeMode: themeMode,
       onThemeChanged: setThemeMode,
+      language: language,
+      onLanguageChanged: setLanguage,
     ),
   );
 }

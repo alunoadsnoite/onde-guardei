@@ -35,6 +35,15 @@ class MainActivity : FlutterActivity() {
                             getPreferences(MODE_PRIVATE).edit().putString("themeMode", mode).apply()
                             result.success(null)
                         }
+                        "readLanguage" -> result.success(
+                            getPreferences(MODE_PRIVATE).getString("language", null)
+                        )
+                        "writeLanguage" -> {
+                            val language = call.arguments as? String
+                            require(language in setOf("pt-BR", "en-US", "es-ES"))
+                            getPreferences(MODE_PRIVATE).edit().putString("language", language).apply()
+                            result.success(null)
+                        }
                         "openEmail" -> {
                             val address = requireNotNull(call.argument<String>("address"))
                             val subject = requireNotNull(call.argument<String>("subject"))

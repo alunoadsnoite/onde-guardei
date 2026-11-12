@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onde_guardei/domain/models.dart';
 import 'package:onde_guardei/domain/repository.dart';
 import 'package:onde_guardei/ui/app.dart';
+import 'package:onde_guardei/ui/catalog_strings.dart';
 import 'package:onde_guardei/ui/editing.dart';
 import 'package:onde_guardei/ui/home.dart';
 
@@ -38,6 +39,66 @@ Future<Directory> tempDir() async =>
     (await Directory.systemTemp.createTemp('onde-ui-'));
 
 void main() {
+  testWidgets('idioma muda a interface e preserva os textos do catálogo', (
+    tester,
+  ) async {
+    final repo = ScreenRepository(Directory.systemTemp);
+    addTearDown(repo.dispose);
+    repo.data = Catalog(
+      items: [
+        StoredItem(
+          id: 'key',
+          name: 'Minha chave',
+          notes: 'Perto da porta',
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ],
+    );
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    String? savedLanguage;
+    messenger.setMockMethodCallHandler(nativeFiles, (call) async {
+      switch (call.method) {
+        case 'readLanguage':
+          return savedLanguage;
+        case 'writeLanguage':
+          savedLanguage = call.arguments as String;
+          return null;
+        default:
+          return null;
+      }
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(nativeFiles, null));
+    expect(await readAppLanguage(), AppLanguage.portuguese);
+    await tester.pumpWidget(OndeGuardeiApp(repository: repo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Configurações e backup'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Idioma'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+    expect(savedLanguage, 'en-US');
+    expect(find.text('Items'), findsOneWidget);
+    expect(find.text('Save item'), findsOneWidget);
+    expect(find.text('Minha chave'), findsOneWidget);
+    expect(find.text('No location set'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Settings and backup'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Español'));
+    await tester.pumpAndSettle();
+    expect(await readAppLanguage(), AppLanguage.spanish);
+    expect(find.text('Guardar objeto'), findsOneWidget);
+    expect(repo.data.items.single.notes, 'Perto da porta');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('aparência acompanha o aparelho e guarda os três modos', (
     tester,
   ) async {
@@ -196,6 +257,8 @@ void main() {
             repo,
             themeMode: ThemeMode.system,
             onThemeChanged: (_) async {},
+            language: AppLanguage.portuguese,
+            onLanguageChanged: (_) async {},
           ),
         ),
       ),
