@@ -1,3 +1,4 @@
+import 'package:onde_guardei/ui/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -107,8 +108,8 @@ class _ItemEditorState extends State<ItemEditor> {
         message(
           context,
           e is PlatformException
-              ? 'Não foi possível abrir a câmera ou as fotos. Verifique a permissão nas configurações do Android.'
-              : errorText(e),
+              ? Strings.of(context).cameraError
+              : errorText(context, e),
         );
       }
     } finally {
@@ -119,10 +120,7 @@ class _ItemEditorState extends State<ItemEditor> {
   Future<void> save() async {
     if (!form.currentState!.validate()) return;
     if (name.text.trim().isEmpty && photo == null) {
-      message(
-        context,
-        'Adicione um nome ou uma foto para guardar este objeto.',
-      );
+      message(context, Strings.of(context).itemRequired);
       return;
     }
     setState(() => busy = true);
@@ -148,7 +146,7 @@ class _ItemEditorState extends State<ItemEditor> {
         });
       }
     } catch (e) {
-      if (mounted) message(context, errorText(e));
+      if (mounted) message(context, errorText(context, e));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -160,9 +158,9 @@ class _ItemEditorState extends State<ItemEditor> {
     if (blank) return true;
     if (await confirm(
       context,
-      'Sair do cadastro?',
-      'O que você escreveu será guardado como rascunho para continuar depois.',
-      'Guardar e sair',
+      Strings.of(context).leaveEditor,
+      Strings.of(context).draftNotice,
+      Strings.of(context).saveAndExit,
     )) {
       await widget.repo.saveDraft(draft);
       return true;
@@ -184,7 +182,11 @@ class _ItemEditorState extends State<ItemEditor> {
     },
     child: Scaffold(
       appBar: AppBar(
-        title: Text(widget.item == null ? 'Guardar objeto' : 'Editar objeto'),
+        title: Text(
+          widget.item == null
+              ? Strings.of(context).storeItem
+              : Strings.of(context).editItem,
+        ),
       ),
       body: SafeArea(
         child: Form(
@@ -193,7 +195,7 @@ class _ItemEditorState extends State<ItemEditor> {
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
             children: [
               Text(
-                'Foto opcional do objeto ou de onde ele fica',
+                Strings.of(context).optionalPhoto,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -212,12 +214,12 @@ class _ItemEditorState extends State<ItemEditor> {
                   OutlinedButton.icon(
                     onPressed: busy ? null : () => pick(ImageSource.camera),
                     icon: const Icon(Icons.photo_camera_outlined),
-                    label: const Text('Tirar foto'),
+                    label: Text(Strings.of(context).takePhoto),
                   ),
                   OutlinedButton.icon(
                     onPressed: busy ? null : () => pick(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('Escolher foto'),
+                    label: Text(Strings.of(context).choosePhoto),
                   ),
                   if (photo != null)
                     TextButton(
@@ -229,7 +231,7 @@ class _ItemEditorState extends State<ItemEditor> {
                               await widget.repo.discardPhoto(removed);
                               await widget.repo.saveDraft(draft);
                             },
-                      child: const Text('Remover foto'),
+                      child: Text(Strings.of(context).removePhoto),
                     ),
                 ],
               ),
@@ -237,10 +239,10 @@ class _ItemEditorState extends State<ItemEditor> {
               TextFormField(
                 controller: name,
                 maxLength: 120,
-                decoration: const InputDecoration(
-                  labelText: 'Nome do objeto',
-                  hintText: 'Ex.: carregador do notebook',
-                  helperText: 'Opcional se você adicionar uma foto',
+                decoration: InputDecoration(
+                  labelText: Strings.of(context).itemName,
+                  hintText: Strings.of(context).itemHint,
+                  helperText: Strings.of(context).optionalName,
                 ),
                 textCapitalization: TextCapitalization.sentences,
               ),
@@ -249,7 +251,7 @@ class _ItemEditorState extends State<ItemEditor> {
                 icon: const Icon(Icons.location_on_outlined),
                 label: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(widget.repo.data.path(place)),
+                  child: Text(placePath(context, widget.repo.data, place)),
                 ),
                 onPressed: busy
                     ? null
@@ -272,9 +274,9 @@ class _ItemEditorState extends State<ItemEditor> {
               TextFormField(
                 controller: keywords,
                 maxLength: 500,
-                decoration: const InputDecoration(
-                  labelText: 'Palavras para encontrar',
-                  hintText: 'Ex.: cabo, Dell, computador',
+                decoration: InputDecoration(
+                  labelText: Strings.of(context).keywords,
+                  hintText: Strings.of(context).keywordsHint,
                 ),
                 textCapitalization: TextCapitalization.none,
               ),
@@ -285,9 +287,9 @@ class _ItemEditorState extends State<ItemEditor> {
                 minLines: 3,
                 maxLines: 8,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Anotações',
-                  hintText: 'Detalhes que ajudam você a lembrar',
+                decoration: InputDecoration(
+                  labelText: Strings.of(context).notes,
+                  hintText: Strings.of(context).notesHint,
                 ),
               ),
               const SizedBox(height: 20),
@@ -301,7 +303,7 @@ class _ItemEditorState extends State<ItemEditor> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check),
-                label: const Text('Guardar objeto'),
+                label: Text(Strings.of(context).storeItem),
               ),
             ],
           ),
@@ -322,16 +324,16 @@ class ItemDetail extends StatelessWidget {
       final colors = Theme.of(context).colorScheme;
       final i = repo.data.items.where((i) => i.id == id).firstOrNull;
       if (i == null) {
-        return const Scaffold(
-          body: Center(child: Text('Objeto não encontrado.')),
+        return Scaffold(
+          body: Center(child: Text(Strings.of(context).itemMissing)),
         );
       }
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Seu objeto'),
+          title: Text(Strings.of(context).yourItem),
           actions: [
             IconButton(
-              tooltip: 'Editar objeto',
+              tooltip: Strings.of(context).editItem,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => Navigator.push(
                 context,
@@ -341,14 +343,14 @@ class ItemDetail extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Excluir objeto',
+              tooltip: Strings.of(context).deleteItem,
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
                 if (!await confirm(
                   context,
-                  'Excluir este objeto?',
-                  'O cadastro será removido do seu catálogo.',
-                  'Excluir',
+                  Strings.of(context).deleteItemTitle,
+                  Strings.of(context).deleteItemHint,
+                  Strings.of(context).delete,
                 )) {
                   return;
                 }
@@ -356,7 +358,7 @@ class ItemDetail extends StatelessWidget {
                   await repo.deleteItem(id);
                   if (context.mounted) Navigator.pop(context);
                 } catch (e) {
-                  if (context.mounted) message(context, errorText(e));
+                  if (context.mounted) message(context, errorText(context, e));
                 }
               },
             ),
@@ -370,14 +372,16 @@ class ItemDetail extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 24),
                   child: Semantics(
-                    label: 'Ampliar foto de ${i.title}',
+                    label: Strings.of(
+                      context,
+                    ).enlargePhoto(itemTitle(context, i)),
                     button: true,
                     child: InkWell(
                       onTap: () => showDialog<void>(
                         context: context,
                         builder: (context) => Dialog.fullscreen(
                           child: Scaffold(
-                            appBar: AppBar(title: Text(i.title)),
+                            appBar: AppBar(title: Text(itemTitle(context, i))),
                             body: Center(
                               child: InteractiveViewer(
                                 minScale: .5,
@@ -385,8 +389,9 @@ class ItemDetail extends StatelessWidget {
                                 child: Image.file(
                                   repo.photoFile(i.photo!),
                                   cacheWidth: 2000,
-                                  errorBuilder: (_, _, _) =>
-                                      const Text('Foto indisponível.'),
+                                  errorBuilder: (_, _, _) => Text(
+                                    Strings.of(context).photoUnavailable,
+                                  ),
                                 ),
                               ),
                             ),
@@ -404,7 +409,7 @@ class ItemDetail extends StatelessWidget {
                   ),
                 ),
               Text(
-                i.title,
+                itemTitle(context, i),
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -422,7 +427,7 @@ class ItemDetail extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ONDE ESTÁ',
+                      Strings.of(context).locationHeading,
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
@@ -431,7 +436,7 @@ class ItemDetail extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      repo.data.path(i.placeId),
+                      placePath(context, repo.data, i.placeId),
                       style: const TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w600,
@@ -440,7 +445,7 @@ class ItemDetail extends StatelessWidget {
                     const SizedBox(height: 16),
                     FilledButton.icon(
                       icon: const Icon(Icons.drive_file_move_outlined),
-                      label: const Text('Mudei de lugar'),
+                      label: Text(Strings.of(context).moved),
                       onPressed: () async {
                         final selected = await Navigator.push<String>(
                           context,
@@ -455,10 +460,12 @@ class ItemDetail extends StatelessWidget {
                         try {
                           await repo.moveItem(id, nextPlace);
                           if (context.mounted) {
-                            message(context, 'Local atualizado.');
+                            message(context, Strings.of(context).placeUpdated);
                           }
                         } catch (e) {
-                          if (context.mounted) message(context, errorText(e));
+                          if (context.mounted) {
+                            message(context, errorText(context, e));
+                          }
                         }
                       },
                     ),
@@ -467,8 +474,8 @@ class ItemDetail extends StatelessWidget {
               ),
               if (i.keywords.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                const Text(
-                  'Palavras para encontrar',
+                Text(
+                  Strings.of(context).keywords,
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
@@ -476,8 +483,8 @@ class ItemDetail extends StatelessWidget {
               ],
               if (i.notes.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                const Text(
-                  'Anotações',
+                Text(
+                  Strings.of(context).notes,
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
@@ -488,18 +495,18 @@ class ItemDetail extends StatelessWidget {
               ],
               const SizedBox(height: 24),
               Text(
-                'Cadastrado em ${dateText(i.createdAt)}',
+                Strings.of(context).createdAt(dateText(context, i.createdAt)),
                 style: TextStyle(color: colors.onSurfaceVariant),
               ),
               if (i.updatedAt.isAfter(i.createdAt))
                 Text(
-                  'Última alteração em ${dateText(i.updatedAt)}',
+                  Strings.of(context).updatedAt(dateText(context, i.updatedAt)),
                   style: TextStyle(color: colors.onSurfaceVariant),
                 ),
               if (i.moves.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                const Text(
-                  'Mudanças de lugar',
+                Text(
+                  Strings.of(context).moves,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
                 ...i.moves.reversed.map(
@@ -510,7 +517,11 @@ class ItemDetail extends StatelessWidget {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     title: Text(m.to),
-                    subtitle: Text('${dateText(m.at)} · antes: ${m.from}'),
+                    subtitle: Text(
+                      Strings.of(
+                        context,
+                      ).previousPlace(dateText(context, m.at), m.from),
+                    ),
                   ),
                 ),
               ],
@@ -545,20 +556,24 @@ class _PlaceEditorState extends State<PlaceEditor> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.place == null ? 'Criar local' : 'Editar local'),
+      title: Text(
+        widget.place == null
+            ? Strings.of(context).createPlace
+            : Strings.of(context).editPlace,
+      ),
       actions: [
         if (widget.place != null)
           IconButton(
-            tooltip: 'Excluir local',
+            tooltip: Strings.of(context).deletePlace,
             icon: const Icon(Icons.delete_outline),
             onPressed: saving
                 ? null
                 : () async {
                     if (!await confirm(
                       context,
-                      'Excluir local?',
-                      'Locais com objetos ou outros locais dentro precisam ser esvaziados primeiro.',
-                      'Excluir',
+                      Strings.of(context).deletePlaceTitle,
+                      Strings.of(context).deletePlaceHint,
+                      Strings.of(context).delete,
                     )) {
                       return;
                     }
@@ -566,7 +581,9 @@ class _PlaceEditorState extends State<PlaceEditor> {
                       await widget.repo.deletePlace(widget.place!.id);
                       if (context.mounted) Navigator.pop(context);
                     } catch (e) {
-                      if (context.mounted) message(context, errorText(e));
+                      if (context.mounted) {
+                        message(context, errorText(context, e));
+                      }
                     }
                   },
           ),
@@ -589,12 +606,12 @@ class _PlaceEditorState extends State<PlaceEditor> {
               autofocus: widget.place == null,
               maxLength: 100,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Nome do local',
-                hintText: 'Quarto, armário, caixa azul…',
+              decoration: InputDecoration(
+                labelText: Strings.of(context).placeName,
+                hintText: Strings.of(context).placeHint,
               ),
               validator: (s) => s == null || s.trim().isEmpty
-                  ? 'Dê um nome a este local.'
+                  ? Strings.of(context).placeRequired
                   : null,
             ),
             const SizedBox(height: 16),
@@ -604,8 +621,8 @@ class _PlaceEditorState extends State<PlaceEditor> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 child: Text(
                   parent == null
-                      ? 'Fica na raiz da casa'
-                      : widget.repo.data.path(parent),
+                      ? Strings.of(context).topLevel
+                      : placePath(context, widget.repo.data, parent),
                 ),
               ),
               onPressed: saving
@@ -635,7 +652,7 @@ class _PlaceEditorState extends State<PlaceEditor> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.check),
-              label: const Text('Salvar local'),
+              label: Text(Strings.of(context).savePlace),
               onPressed: saving
                   ? null
                   : () async {
@@ -652,7 +669,9 @@ class _PlaceEditorState extends State<PlaceEditor> {
                         );
                         if (context.mounted) Navigator.pop(context, id);
                       } catch (e) {
-                        if (context.mounted) message(context, errorText(e));
+                        if (context.mounted) {
+                          message(context, errorText(context, e));
+                        }
                       } finally {
                         if (mounted) setState(() => saving = false);
                       }
@@ -694,7 +713,9 @@ class _PlacePickerState extends State<PlacePicker> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.excluded == null ? 'Onde fica?' : 'Dentro de qual local?',
+          widget.excluded == null
+              ? Strings.of(context).where
+              : Strings.of(context).inside,
         ),
       ),
       body: SafeArea(
@@ -704,8 +725,8 @@ class _PlacePickerState extends State<PlacePicker> {
               padding: const EdgeInsets.all(20),
               child: TextField(
                 onChanged: (s) => setState(() => query = s),
-                decoration: const InputDecoration(
-                  labelText: 'Buscar por parte do caminho',
+                decoration: InputDecoration(
+                  labelText: Strings.of(context).searchPath,
                   prefixIcon: Icon(Icons.search),
                 ),
               ),
@@ -717,8 +738,8 @@ class _PlacePickerState extends State<PlacePicker> {
                     leading: const Icon(Icons.home_outlined),
                     title: Text(
                       widget.excluded == null
-                          ? 'Sem local definido'
-                          : 'Na raiz da casa',
+                          ? Strings.of(context).noPlace
+                          : Strings.of(context).rootPlace,
                     ),
                     selected: widget.selectedId == null,
                     onTap: () => Navigator.pop(context, ''),
@@ -748,7 +769,7 @@ class _PlacePickerState extends State<PlacePicker> {
           ? null
           : FloatingActionButton.extended(
               icon: const Icon(Icons.add),
-              label: const Text('Novo local'),
+              label: Text(Strings.of(context).newPlace),
               onPressed: () async {
                 final id = await Navigator.push<String>(
                   context,

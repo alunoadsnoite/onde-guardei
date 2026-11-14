@@ -22,6 +22,26 @@ class CatalogRepository extends ChangeNotifier {
   final Directory directory;
   Catalog data = const Catalog();
   String? recoveryNotice;
+  String? languageTag;
+
+  File get _languageFile => File('${directory.path}/language');
+
+  Future<void> loadLanguage() async {
+    try {
+      languageTag = (await _languageFile.readAsString()).trim();
+    } on FileSystemException {
+      languageTag = null;
+    }
+  }
+
+  Future<void> saveLanguage(String tag) => _queue(() async {
+    await directory.create(recursive: true);
+    final temporary = File('${_languageFile.path}.tmp');
+    await temporary.writeAsString(tag, flush: true);
+    await temporary.rename(_languageFile.path);
+    languageTag = tag;
+  });
+
   bool _mainTrusted = true;
   Future<void> _tail = Future.value();
   Future<void> _draftTail = Future.value();

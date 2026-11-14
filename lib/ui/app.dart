@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:onde_guardei/ui/strings.dart';
 import 'package:onde_guardei/domain/repository.dart';
 import 'package:onde_guardei/ui/home.dart';
 
 const nativeFiles = MethodChannel('br.com.valdenor.ondeguardei/files');
 
 /// Versão mostrada ao usuário. Mantenha em sincronia com `pubspec.yaml`.
-const appVersion = '0.4.0';
+const appVersion = '0.5.0';
 const appName = 'Onde Guardei?';
 
 ThemeData appTheme([Brightness brightness = Brightness.light]) {
@@ -77,6 +79,13 @@ class OndeGuardeiApp extends StatefulWidget {
 }
 
 class _OndeGuardeiAppState extends State<OndeGuardeiApp> {
+  late Locale locale = localeFromTag(widget.repository.languageTag);
+
+  Future<void> changeLocale(Locale value) async {
+    await widget.repository.saveLanguage(value.toLanguageTag());
+    if (mounted) setState(() => locale = value);
+  }
+
   late ThemeMode themeMode = widget.initialThemeMode;
 
   Future<void> setThemeMode(ThemeMode value) async {
@@ -88,6 +97,9 @@ class _OndeGuardeiAppState extends State<OndeGuardeiApp> {
   Widget build(BuildContext context) => MaterialApp(
     title: appName,
     debugShowCheckedModeBanner: false,
+    locale: locale,
+    supportedLocales: supportedLocales,
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
     theme: appTheme(),
     darkTheme: appTheme(Brightness.dark),
     themeMode: themeMode,
@@ -95,6 +107,7 @@ class _OndeGuardeiAppState extends State<OndeGuardeiApp> {
       widget.repository,
       themeMode: themeMode,
       onThemeChanged: setThemeMode,
+      onLanguageChanged: changeLocale,
     ),
   );
 }

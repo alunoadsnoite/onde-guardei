@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:onde_guardei/ui/strings.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:onde_guardei/ui/app.dart';
 import 'package:onde_guardei/domain/repository.dart';
@@ -17,11 +19,14 @@ class Bootstrap extends StatefulWidget {
 
 class _BootstrapState extends State<Bootstrap> {
   late Future<(CatalogRepository, ThemeMode)> future = open();
+  Locale startupLocale = supportedLocales.first;
   Future<(CatalogRepository, ThemeMode)> open() async {
     final root = Directory(
       (await nativeFiles.invokeMethod<String>('dataDirectory'))!,
     );
     final repo = CatalogRepository(Directory('${root.path}/catalog'));
+    await repo.loadLanguage();
+    startupLocale = localeFromTag(repo.languageTag);
     await repo.load();
     if (Platform.isAndroid) {
       try {
@@ -52,7 +57,11 @@ class _BootstrapState extends State<Bootstrap> {
           initialThemeMode: themeMode,
         );
       }
+      final strings = Strings.forLocale(startupLocale);
       return MaterialApp(
+        locale: startupLocale,
+        supportedLocales: supportedLocales,
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         theme: appTheme(),
         darkTheme: appTheme(Brightness.dark),
         home: Scaffold(
@@ -66,18 +75,16 @@ class _BootstrapState extends State<Bootstrap> {
                         children: [
                           const Icon(Icons.folder_off_outlined, size: 48),
                           const SizedBox(height: 20),
-                          const Text(
-                            'Não conseguimos abrir seu catálogo.',
-                            style: TextStyle(fontSize: 22),
+                          Text(
+                            strings.openFailed,
+                            style: const TextStyle(fontSize: 22),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Os arquivos foram preservados. Não reinstale o app; tente abrir novamente.',
-                          ),
+                          Text(strings.filesPreserved),
                           const SizedBox(height: 20),
                           FilledButton(
                             onPressed: () => setState(() => future = open()),
-                            child: const Text('Tentar novamente'),
+                            child: Text(strings.retry),
                           ),
                         ],
                       )

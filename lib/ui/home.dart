@@ -1,3 +1,4 @@
+import 'package:onde_guardei/ui/strings.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ const developerEmail = 'valdenor.sa@proton.me';
 
 class Home extends StatefulWidget {
   final CatalogRepository repo;
+  final Future<void> Function(Locale)? onLanguageChanged;
   final ThemeMode themeMode;
   final Future<void> Function(ThemeMode) onThemeChanged;
   const Home(
@@ -19,6 +21,7 @@ class Home extends StatefulWidget {
     super.key,
     required this.themeMode,
     required this.onThemeChanged,
+    this.onLanguageChanged,
   });
   @override
   State<Home> createState() => _HomeState();
@@ -79,19 +82,25 @@ class _HomeState extends State<Home> {
     final selected = await showDialog<ThemeMode>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Aparência'),
+        title: Text(Strings.of(context).appearance),
         children: [
           RadioGroup<ThemeMode>(
             groupValue: widget.themeMode,
             onChanged: (value) => Navigator.pop(context, value),
-            child: const Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                RadioListTile(title: Text('Claro'), value: ThemeMode.light),
-                RadioListTile(title: Text('Escuro'), value: ThemeMode.dark),
                 RadioListTile(
-                  title: Text('Automático'),
-                  subtitle: Text('Seguir a aparência do aparelho'),
+                  title: Text(Strings.of(context).light),
+                  value: ThemeMode.light,
+                ),
+                RadioListTile(
+                  title: Text(Strings.of(context).dark),
+                  value: ThemeMode.dark,
+                ),
+                RadioListTile(
+                  title: Text(Strings.of(context).automatic),
+                  subtitle: Text(Strings.of(context).followAppearance),
                   value: ThemeMode.system,
                 ),
               ],
@@ -104,7 +113,7 @@ class _HomeState extends State<Home> {
     try {
       await widget.onThemeChanged(selected);
     } catch (_) {
-      if (mounted) message(context, 'Não foi possível salvar a aparência.');
+      if (mounted) message(context, Strings.of(context).appearanceError);
     }
   }
 
@@ -112,28 +121,24 @@ class _HomeState extends State<Home> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sobre e suporte'),
+        title: Text(Strings.of(context).support),
         scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('$appName · $appVersion'),
+            Text('$appName · $appVersion'),
             const SizedBox(height: 12),
-            const Text('Desenvolvedor'),
-            const Text('Valdenor Tavares'),
+            Text(Strings.of(context).developer),
+            Text('Valdenor Tavares'),
             const SelectableText(developerEmail),
             TextButton.icon(
               onPressed: emailDeveloper,
               icon: const Icon(Icons.email_outlined),
-              label: const Text('Enviar e-mail'),
+              label: Text(Strings.of(context).sendEmail),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'O catálogo funciona sem conta e sem internet. Fotos e textos '
-              'ficam no aparelho. Guarde um backup fora do app antes de trocar '
-              'de celular ou desinstalar.\n\nCódigo aberto • licença MIT',
-            ),
+            Text(Strings.of(context).supportBody),
           ],
         ),
         actions: [
@@ -143,11 +148,11 @@ class _HomeState extends State<Home> {
               applicationName: appName,
               applicationVersion: appVersion,
             ),
-            child: const Text('Licenças'),
+            child: Text(Strings.of(context).licenses),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
+            child: Text(Strings.of(context).close),
           ),
         ],
       ),
@@ -156,9 +161,10 @@ class _HomeState extends State<Home> {
 
   Future<void> emailDeveloper() async {
     try {
+      final subject = Strings.of(context).supportSubject;
       final opened = await nativeFiles.invokeMethod<bool>('openEmail', {
         'address': developerEmail,
-        'subject': 'Onde Guardei? — dúvida ou sugestão',
+        'subject': subject,
       });
       if (opened == true) return;
     } on PlatformException {
@@ -170,12 +176,12 @@ class _HomeState extends State<Home> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Não foi possível abrir o e-mail'),
+        title: Text(Strings.of(context).emailError),
         content: const SelectableText(developerEmail),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
+            child: Text(Strings.of(context).close),
           ),
         ],
       ),
@@ -187,9 +193,9 @@ class _HomeState extends State<Home> {
     if (restore &&
         !await confirm(
           context,
-          'Restaurar catálogo?',
-          'O backup substituirá os objetos e locais atuais. Crie um backup antes se quiser guardar os dados que estão aqui.',
-          'Escolher backup',
+          Strings.of(context).restoreTitle,
+          Strings.of(context).restoreWarning,
+          Strings.of(context).chooseBackup,
         )) {
       return;
     }
@@ -206,7 +212,7 @@ class _HomeState extends State<Home> {
         await refreshDraft();
         if (mounted) {
           setState(() => filter = null);
-          message(context, 'Catálogo restaurado, com as fotos.');
+          message(context, Strings.of(context).restored);
         }
       } else {
         final result = await repo.exportBackup();
@@ -220,18 +226,44 @@ class _HomeState extends State<Home> {
           message(
             context,
             result.missingPhotos > 0
-                ? 'Backup salvo, mas ${result.missingPhotos} foto(s) não estavam no aparelho e ficaram de fora.'
-                : 'Backup salvo com os cadastros e as fotos.',
+                ? Strings.of(context).backupMissing(result.missingPhotos)
+                : Strings.of(context).backupSaved,
           );
         }
       }
     } catch (e) {
-      if (mounted) message(context, errorText(e));
+      if (mounted) message(context, errorText(context, e));
     } finally {
       if (temporary != null && await temporary.exists()) {
         await temporary.delete();
       }
       if (mounted) setState(() => working = false);
+    }
+  }
+
+  Future<void> selectLanguage() async {
+    final current = Localizations.localeOf(context);
+    final selected = await showDialog<Locale>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(Strings.of(context).language),
+        children: [
+          for (var index = 0; index < supportedLocales.length; index++)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, supportedLocales[index]),
+              child: Semantics(
+                selected: current == supportedLocales[index],
+                child: Text(languageLabels[index]),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null || selected == current) return;
+    try {
+      await widget.onLanguageChanged?.call(selected);
+    } catch (_) {
+      if (mounted) message(context, Strings.of(context).languageSaveFailed);
     }
   }
 
@@ -248,13 +280,10 @@ class _HomeState extends State<Home> {
       final counts = repo.data.itemsByPlace();
       return Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'Onde Guardei?',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
+          title: Text(appName, style: TextStyle(fontWeight: FontWeight.w800)),
           actions: [
             PopupMenuButton<String>(
-              tooltip: 'Configurações e backup',
+              tooltip: Strings.of(context).settingsMenu,
               enabled: !working,
               onSelected: (value) {
                 if (value == 'export') {
@@ -263,17 +292,32 @@ class _HomeState extends State<Home> {
                 if (value == 'import') {
                   backup(true);
                 }
+                if (value == 'language') selectLanguage();
                 if (value == 'appearance') chooseAppearance();
                 if (value == 'about') showSupport();
               },
-              itemBuilder: (_) => const [
+              itemBuilder: (_) => [
+                if (widget.onLanguageChanged != null)
+                  PopupMenuItem(
+                    value: 'language',
+                    child: Text(Strings.of(context).language),
+                  ),
                 PopupMenuItem(
                   value: 'export',
-                  child: Text('Criar backup com fotos'),
+                  child: Text(Strings.of(context).createBackup),
                 ),
-                PopupMenuItem(value: 'import', child: Text('Restaurar backup')),
-                PopupMenuItem(value: 'appearance', child: Text('Aparência')),
-                PopupMenuItem(value: 'about', child: Text('Sobre e suporte')),
+                PopupMenuItem(
+                  value: 'import',
+                  child: Text(Strings.of(context).restoreBackup),
+                ),
+                PopupMenuItem(
+                  value: 'appearance',
+                  child: Text(Strings.of(context).appearance),
+                ),
+                PopupMenuItem(
+                  value: 'about',
+                  child: Text(Strings.of(context).support),
+                ),
               ],
             ),
           ],
@@ -281,13 +325,13 @@ class _HomeState extends State<Home> {
         body: SafeArea(
           top: false,
           child: working
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(height: 20),
-                      Text('Cuidando do seu catálogo…'),
+                      Text(Strings.of(context).working),
                     ],
                   ),
                 )
@@ -301,7 +345,7 @@ class _HomeState extends State<Home> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Encontre o que você guardou.',
+                              Strings.of(context).headline,
                               style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
@@ -310,7 +354,7 @@ class _HomeState extends State<Home> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${repo.data.items.length} objetos · ${repo.data.places.length} locais',
+                              '${Strings.of(context).itemCount(repo.data.items.length)} · ${Strings.of(context).placeCount(repo.data.places.length)}',
                               style: TextStyle(color: colors.primary),
                             ),
                             const SizedBox(height: 20),
@@ -319,13 +363,15 @@ class _HomeState extends State<Home> {
                               onChanged: (value) =>
                                   setState(() => query = value),
                               decoration: InputDecoration(
-                                hintText: 'Ex.: chave, gaveta ou reserva',
+                                hintText: Strings.of(context).searchExample,
                                 prefixIcon: const Icon(Icons.search),
-                                labelText: 'Buscar por nome, local ou anotação',
+                                labelText: Strings.of(context).searchFields,
                                 suffixIcon: query.isEmpty
                                     ? null
                                     : IconButton(
-                                        tooltip: 'Limpar busca',
+                                        tooltip: Strings.of(
+                                          context,
+                                        ).clearSearch,
                                         icon: const Icon(Icons.close),
                                         onPressed: () {
                                           search.clear();
@@ -351,12 +397,17 @@ class _HomeState extends State<Home> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        repo.recoveryNotice!,
+                                        noticeText(
+                                          context,
+                                          repo.recoveryNotice!,
+                                        ),
                                         style: TextStyle(color: colors.error),
                                       ),
                                     ),
                                     IconButton(
-                                      tooltip: 'Dispensar aviso',
+                                      tooltip: Strings.of(
+                                        context,
+                                      ).dismissNotice,
                                       visualDensity: VisualDensity.compact,
                                       icon: const Icon(Icons.close, size: 20),
                                       onPressed: repo.dismissNotice,
@@ -370,9 +421,7 @@ class _HomeState extends State<Home> {
                                 child: OutlinedButton.icon(
                                   onPressed: () => edit(saved: draft),
                                   icon: const Icon(Icons.edit_note),
-                                  label: const Text(
-                                    'Continuar cadastro não salvo',
-                                  ),
+                                  label: Text(Strings.of(context).resumeDraft),
                                 ),
                               ),
                             const SizedBox(height: 12),
@@ -388,11 +437,11 @@ class _HomeState extends State<Home> {
                               ? Icons.inventory_2_outlined
                               : Icons.search_off,
                           title: repo.data.items.isEmpty
-                              ? 'Um lugar para lembrar.'
-                              : 'Nada encontrado por aqui.',
+                              ? Strings.of(context).emptyTitle
+                              : Strings.of(context).noResults,
                           text: repo.data.items.isEmpty
-                              ? 'Cadastre seu primeiro objeto com uma foto, um nome ou os dois. Depois, conte onde ele fica.'
-                              : 'Tente outra palavra ou escolha outro local.',
+                              ? Strings.of(context).emptyHint
+                              : Strings.of(context).searchAgain,
                         ),
                       )
                     else
@@ -418,11 +467,10 @@ class _HomeState extends State<Home> {
                   ],
                 )
               : places.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.home_outlined,
-                  title: 'Como você organiza sua casa?',
-                  text:
-                      'Crie um cômodo, depois um móvel ou uma caixa dentro dele. Exemplo: quarto › armário › caixa azul.',
+                  title: Strings.of(context).placesTitle,
+                  text: Strings.of(context).placesHint,
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
@@ -445,12 +493,12 @@ class _HomeState extends State<Home> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         subtitle: Text(
-                          '${repo.data.path(p.id)}\n$count ${count == 1 ? 'objeto' : 'objetos'}, incluindo os locais de dentro',
+                          '${repo.data.path(p.id)}\n${Strings.of(context).nestedCount(count)}',
                         ),
                         isThreeLine: true,
                         onTap: () => filterByPlace(p.id),
                         trailing: IconButton(
-                          tooltip: 'Editar ${p.name}',
+                          tooltip: Strings.of(context).editNamed(p.name),
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: () => Navigator.push(
                             context,
@@ -467,16 +515,16 @@ class _HomeState extends State<Home> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: tab,
           onDestinationSelected: (value) => setState(() => tab = value),
-          destinations: const [
+          destinations: [
             NavigationDestination(
               icon: Icon(Icons.inventory_2_outlined),
               selectedIcon: Icon(Icons.inventory_2),
-              label: 'Objetos',
+              label: Strings.of(context).items,
             ),
             NavigationDestination(
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home),
-              label: 'Locais',
+              label: Strings.of(context).places,
             ),
           ],
         ),
@@ -500,7 +548,11 @@ class _HomeState extends State<Home> {
                 backgroundColor: colors.primary,
                 foregroundColor: colors.onPrimary,
                 icon: const Icon(Icons.add),
-                label: Text(tab == 0 ? 'Guardar objeto' : 'Criar local'),
+                label: Text(
+                  tab == 0
+                      ? Strings.of(context).storeItem
+                      : Strings.of(context).createPlace,
+                ),
               ),
       );
     },
@@ -540,7 +592,7 @@ class ObjectTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.title,
+                      itemTitle(context, item),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -549,7 +601,7 @@ class ObjectTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      repo.data.path(item.placeId),
+                      placePath(context, repo.data, item.placeId),
                       style: TextStyle(color: colors.primary),
                     ),
                     if (item.keywords.isNotEmpty)

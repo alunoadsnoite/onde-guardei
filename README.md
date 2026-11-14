@@ -63,3 +63,7 @@ Se uma foto necessária não estiver disponível, a exportação é recusada. Se
 
 Licença MIT. Bibliotecas de terceiros mantêm suas respectivas licenças,
 disponíveis também em **Licenças** no aplicativo.
+
+### Idioma
+
+Abra o menu **Configurações e backup → Idioma** para escolher português brasileiro, inglês ou espanhol. A escolha é salva no aparelho. Os nomes, as anotações e o histórico já gravado permanecem como foram cadastrados.

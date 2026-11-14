@@ -1,0 +1,3 @@
+Crea un catálogo de objetos y lugares de tu casa. Añade fotos, notas y palabras clave, organiza los lugares por niveles y busca los objetos cuando los necesites.
+
+La aplicación funciona sin cuenta ni conexión a internet. Las fotos y los textos permanecen en tu dispositivo. Puedes crear una copia con las fotos y guardarla fuera de la aplicación.
