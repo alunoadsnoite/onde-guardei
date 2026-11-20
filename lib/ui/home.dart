@@ -1,7 +1,10 @@
 import 'package:onde_guardei/ui/strings.dart';
+
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:onde_guardei/domain/models.dart';
 import 'package:onde_guardei/domain/repository.dart';
 import 'package:onde_guardei/ui/editing.dart';
@@ -117,6 +120,52 @@ class _HomeState extends State<Home> {
     }
   }
 
+  Future<void> _showSupportFeedback(BuildContext context, String message) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(Strings.of(dialogContext).close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyPixKey(BuildContext context) async {
+    var feedback = Strings.of(context).pixCopied;
+    final failure = Strings.of(context).pixCopyError;
+    try {
+      await Clipboard.setData(
+        const ClipboardData(text: '81063e93-0c1b-4ddb-8a16-b9be68a75d4e'),
+      );
+    } on PlatformException {
+      feedback = failure;
+    } on MissingPluginException {
+      feedback = failure;
+    }
+    if (context.mounted) await _showSupportFeedback(context, feedback);
+  }
+
+  Future<void> _openSponsors(BuildContext context) async {
+    final failure = Strings.of(context).sponsorsError;
+    try {
+      final opened = await launchUrl(
+        Uri.parse('https://github.com/sponsors/alunoadsnoite'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) return;
+    } on PlatformException {
+      // Show the same feedback when no browser is available.
+    } on MissingPluginException {
+      // Some Flutter targets may not register a URL launcher.
+    }
+    if (context.mounted) await _showSupportFeedback(context, failure);
+  }
+
   void showSupport() {
     showDialog<void>(
       context: context,
@@ -139,6 +188,21 @@ class _HomeState extends State<Home> {
             ),
             const SizedBox(height: 12),
             Text(Strings.of(context).supportBody),
+            const SizedBox(height: 12),
+            Text(
+              Strings.of(context).supportDeveloper,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            TextButton.icon(
+              onPressed: () => _copyPixKey(context),
+              icon: const Icon(Icons.copy),
+              label: Text(Strings.of(context).copyPix),
+            ),
+            TextButton.icon(
+              onPressed: () => _openSponsors(context),
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('GitHub Sponsors'),
+            ),
           ],
         ),
         actions: [

@@ -23,6 +23,33 @@ class Strings {
         _ => 0,
       });
 
+  String get supportDeveloper => const [
+    'Apoie o desenvolvedor',
+    'Support the developer',
+    'Apoya al desarrollador',
+  ][_index];
+
+  String get copyPix =>
+      const ['Copiar chave Pix', 'Copy Pix key', 'Copiar clave Pix'][_index];
+
+  String get pixCopied => const [
+    'Chave Pix copiada.',
+    'Pix key copied.',
+    'Clave Pix copiada.',
+  ][_index];
+
+  String get pixCopyError => const [
+    'Não foi possível copiar a chave Pix.',
+    'Could not copy the Pix key.',
+    'No se pudo copiar la clave Pix.',
+  ][_index];
+
+  String get sponsorsError => const [
+    'Não foi possível abrir o GitHub Sponsors.',
+    'Could not open GitHub Sponsors.',
+    'No se pudo abrir GitHub Sponsors.',
+  ][_index];
+
   String get restoreTitle => const [
     'Restaurar catálogo?',
     'Restore catalog?',
