@@ -1,5 +1,16 @@
 # Onde Guardei?
 
+**Lembre onde guardou cada objeto, com fotos e busca por local.**
+
+`Flutter · Dart · Android`
+
+[Reportar problema](https://github.com/alunoadsnoite/onde-guardei/issues) · [Licença](LICENSE)
+
+## Veja o aplicativo
+
+<img src="fastlane/metadata/android/pt-BR/images/phoneScreenshots/1-empty-catalog.png" alt="Tela 1 do Onde Guardei?" width="240">
+<img src="fastlane/metadata/android/pt-BR/images/phoneScreenshots/2-illustrative-catalog.png" alt="Tela 2 do Onde Guardei?" width="240">
+
 Aplicativo Android para encontrar objetos guardados em casa. Cadastre uma foto, um
 nome ou ambos e informe onde o objeto está: quarto → armário → caixa, por exemplo.
 
@@ -67,3 +78,7 @@ disponíveis também em **Licenças** no aplicativo.
 ### Idioma
 
 Abra o menu **Configurações e backup → Idioma** para escolher português brasileiro, inglês ou espanhol. A escolha é salva no aparelho. Os nomes, as anotações e o histórico já gravado permanecem como foram cadastrados.
+
+## Como contribuir
+
+Sugestões, traduções e relatos de problemas são bem-vindos. Abra uma issue com o contexto e o comportamento esperado. Para alterações de código, explique a mudança e os testes realizados no pull request. Use dados fictícios nos exemplos e nas capturas.
