@@ -1,0 +1,1 @@
+Añade apoyo voluntario al desarrollador en ajustes: copiar la clave Pix y abrir GitHub Sponsors.

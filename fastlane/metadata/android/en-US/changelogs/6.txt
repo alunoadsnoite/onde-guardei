@@ -1,0 +1,1 @@
+Adds voluntary developer support in settings: copy the Pix key and open GitHub Sponsors.
