@@ -1,0 +1,1 @@
+Adiciona apoio voluntário ao desenvolvedor nas configurações: copiar chave Pix e abrir GitHub Sponsors.
