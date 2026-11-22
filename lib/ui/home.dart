@@ -433,8 +433,9 @@ class _HomeState extends State<Home> {
                                 suffixIcon: query.isEmpty
                                     ? null
                                     : IconButton(
-                                        tooltip: Strings.of(context)
-                                            .clearSearch,
+                                        tooltip: Strings.of(
+                                          context,
+                                        ).clearSearch,
                                         icon: const Icon(Icons.close),
                                         onPressed: () {
                                           search.clear();
@@ -468,8 +469,9 @@ class _HomeState extends State<Home> {
                                       ),
                                     ),
                                     IconButton(
-                                      tooltip: Strings.of(context)
-                                          .dismissNotice,
+                                      tooltip: Strings.of(
+                                        context,
+                                      ).dismissNotice,
                                       visualDensity: VisualDensity.compact,
                                       icon: const Icon(Icons.close, size: 20),
                                       onPressed: repo.dismissNotice,
